@@ -1,13 +1,12 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace gaaameee.Servises.Battle
+namespace Services.Battle
 {
-    internal class DamageCalculator
+    internal class BattleField
     {
     }
 }

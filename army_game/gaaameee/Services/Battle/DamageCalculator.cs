@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace gaaameee.Servises.Logging
+namespace Services.Battle
 {
-    internal class ConsoleBattleLogger
+    internal class DamageCalculator
     {
     }
 }

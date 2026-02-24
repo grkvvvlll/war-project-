@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace gaaameee.Servises.Random
+namespace Services.Random
 {
     internal class RandomService
     {

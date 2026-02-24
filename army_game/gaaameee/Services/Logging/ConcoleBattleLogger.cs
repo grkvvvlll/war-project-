@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace gaaameee.Presentation
+namespace Services.Logging
 {
-    internal class Program
+    internal class ConcoleBattleLogger
     {
     }
 }
