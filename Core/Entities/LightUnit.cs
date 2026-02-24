@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace gaaameee.Core.Entities
 {
-    internal class BattleResult
+    public class LightUnit
     {
     }
 }

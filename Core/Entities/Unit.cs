@@ -4,9 +4,9 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Services.Battle
+namespace gaaameee.Core.Entities
 {
-    internal class BattleField
+    public class Unit
     {
     }
 }
