@@ -9,9 +9,9 @@ namespace gaaameee.Core.Interfaces
 
         bool HasAliveUnits { get; }
 
-        IUnit GetCurrentAliveUnit();
-        void MoveToNextAliveUnit();
-
         int TotalCost { get; }
+
+        IUnit GetFrontUnit();
+        void RemoveFrontUnit();
     }
 }
