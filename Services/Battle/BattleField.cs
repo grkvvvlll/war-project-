@@ -50,31 +50,34 @@ namespace Services.Battle
             var attacker = attackingArmy.GetCurrentAliveUnit();
             var defender = defendingArmy.GetCurrentAliveUnit();
 
-            // Если есть спецспособность — используем, иначе обычный удар
+            // Логируем начало хода
+            _logger.LogInfo($"--- {attackingArmy.Name} ход ---");
+
             if (attacker.SpecialAbility != null && attacker.SpecialAbility.CanUse(attacker))
             {
-                attacker.SpecialAbility.Use(attacker, defender);
-                _logger.Log($"{attackingArmy.Name}: {attacker.Name} used '{attacker.SpecialAbility.Name}' on {defendingArmy.Name}: {defender.Name}");
+                int damage = _damageCalculator.CalculateDamage(attacker, defender);
+                defender.TakeDamage(damage);
+
+                _logger.LogSpecial(attacker, defender, attacker.SpecialAbility.Name, damage);
             }
             else
             {
                 int damage = _damageCalculator.CalculateDamage(attacker, defender);
                 defender.TakeDamage(damage);
 
-                _logger.Log($"{attackingArmy.Name}: {attacker.Name} hits {defendingArmy.Name}: {defender.Name} for {damage} damage (HP left: {defender.Health})");
+                _logger.LogHit(attacker, defender, damage);
             }
 
-            // Если защитник умер — сдвигаем армию на следующего
+            // Проверка смерти
             if (!defender.IsAlive)
             {
-                _logger.Log($"{defendingArmy.Name}: {defender.Name} died.");
+                _logger.LogDeath(defender);
                 defendingArmy.MoveToNextAliveUnit();
             }
 
-            // На всякий случай (если способности могут убить атакующего)
             if (!attacker.IsAlive)
             {
-                _logger.Log($"{attackingArmy.Name}: {attacker.Name} died.");
+                _logger.LogDeath(attacker);
                 attackingArmy.MoveToNextAliveUnit();
             }
         }

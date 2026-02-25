@@ -1,12 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using gaaameee.Core.Interfaces;
 
 namespace gaaameee.Core.Entities
 {
-    public class LightUnit
+    public class LightUnit : Unit
     {
+        public LightUnit(
+            string name,
+            int attack,
+            int defence,
+            int health,
+            int cost)
+            : base(name, attack, defence, health, cost)
+        {
+            SpecialAbility = null;
+        }
     }
 }

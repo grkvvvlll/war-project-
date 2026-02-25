@@ -1,12 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using gaaameee.Core.Interfaces;
 
 namespace gaaameee.Core.Entities
 {
-    public class HeavyUnit
+    // Имеет повышенную защиту и здоровье.
+    public class HeavyUnit : Unit
     {
+        public HeavyUnit(
+            string name,
+            int attack,
+            int defence,
+            int health,
+            int cost)
+            : base(name, attack, defence, health, cost)
+        {
+            // Спецспособности нет
+            SpecialAbility = null;
+        }
     }
 }
