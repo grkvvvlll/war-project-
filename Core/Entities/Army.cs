@@ -58,5 +58,10 @@ namespace gaaameee.Core.Entities
         {
             return _units.First(u => u.IsAlive);
         }
+
+        public void RemoveDeadUnits()
+        {
+            _units.RemoveAll(u => !u.IsAlive);
+        }
     }
 }

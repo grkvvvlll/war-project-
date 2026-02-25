@@ -94,6 +94,10 @@ namespace Services.Battle
                 Console.WriteLine("Нажмите Enter для следующего хода...");
                 Console.ReadLine();
 
+                // ===== УДАЛЕНИЕ ПОГИБШИХ ПОСЛЕ ПОЛНОГО РАУНДА =====
+                army1.RemoveDeadUnits();
+                army2.RemoveDeadUnits();
+
                 turns++;
             }
 

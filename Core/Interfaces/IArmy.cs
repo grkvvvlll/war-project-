@@ -13,5 +13,7 @@ namespace gaaameee.Core.Interfaces
 
         IUnit GetFrontUnit();
         void RemoveFrontUnit();
+
+        void RemoveDeadUnits();
     }
 }
