@@ -4,6 +4,8 @@ using gaaameee.Core.Interfaces;
 using gaaameee.Core.Entities;
 using gaaameee.Core.Factories;
 using Services.Battle;
+using Services.Logging;
+using Services.Random;
 
 namespace Presentation
 {
@@ -31,7 +33,7 @@ namespace Presentation
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=== Battle Game ===");
+                Console.WriteLine("=== Army Game ===");
                 Console.WriteLine("1. Новая игра");
                 Console.WriteLine("2. Помощь");
                 Console.WriteLine("0. Выход");
@@ -116,21 +118,22 @@ namespace Presentation
         private void ShowHelp()
         {
             Console.Clear();
-            Console.WriteLine("=== ПОМОЩЬ ===\n");
 
             var heavy = UnitFactory.CreateHeavy("Heavy");
             var light = UnitFactory.CreateLight("Light");
             var archer = UnitFactory.CreateArcher("Archer");
 
-            PrintUnitInfo("🛡️ HeavyUnit", heavy);
-            PrintUnitInfo("⚔️ LightUnit", light);
-            PrintUnitInfo("🏹 Archer", archer);
+            PrintUnitInfo("🛡️ HeavyUnit - сильный солдат:", heavy);
+            PrintUnitInfo("⚔️ LightUnit - обычный солдат:", light);
+            PrintUnitInfo("🏹 Archer - лучник:", archer);
 
-            Console.WriteLine("Механика:");
-            Console.WriteLine("A удар → B ответ → A лучники → B лучники → следующий ход.");
-            Console.WriteLine("Урон = Attack - Defence (не меньше 0).");
+            Console.WriteLine("Алгоритм игры:");
+            Console.WriteLine("Случайным образом выбирается армия, атакующая первой.");
+            Console.WriteLine("Ближайшие друг к другу солдаты вражеских армий наносят по одному удару.");
+            Console.WriteLine("Лучники обеих армий, начиная со второго, стреляют по противнику, если могут.");
+            Console.WriteLine("Убитые солдаты исчезают.");
 
-            Console.WriteLine("\nНажмите Enter для возврата...");
+            Console.WriteLine("\nНажмите Enter для возврата в меню");
             Console.ReadLine();
         }
 

@@ -7,33 +7,21 @@ namespace Services.Logging
     {
         public void Log(string message)
         {
-            Console.ResetColor(); 
+            Console.ResetColor();
             Console.WriteLine(message);
         }
 
-        public void LogHit(IUnit attacker, IUnit defender, int damage)
+        public void LogInfo(string message)
         {
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.Write($"{attacker.Name} ");
-
             Console.ResetColor();
-            Console.Write("атакует ");
-
-            // Цвет для защитника
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.Write($"{defender.Name}");
-
-            Console.ResetColor();
-            Console.WriteLine($" и наносит {damage} урона");
-
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"   {attacker.Name} -> HP: {attacker.Health}, DEF: {attacker.Defence}");
-            Console.WriteLine($"   {defender.Name} -> HP: {defender.Health}, DEF: {defender.Defence}");
-            Console.ResetColor();
+            Console.WriteLine(message);
         }
 
-        // Лог использования спецспособности.
-        public void LogSpecial(IUnit user, IUnit target, string abilityName, int damage)
+        public void LogSpecial(
+            IUnit user,
+            IUnit target,
+            string abilityName,
+            int damage)
         {
             Console.ForegroundColor = ConsoleColor.Magenta;
             Console.Write($"{user.Name} ");
@@ -47,26 +35,103 @@ namespace Services.Logging
             Console.ResetColor();
             Console.WriteLine($" и наносит {damage} урона");
 
-            // HP после удара
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"   {user.Name} -> HP: {user.Health}, DEF: {user.Defence}");
-            Console.WriteLine($"   {target.Name} -> HP: {target.Health}, DEF: {target.Defence}");
+            Console.WriteLine(
+                $"   {user.Name} -> HP: {user.Health}, DEF: {user.Defence}");
+            Console.WriteLine(
+                $"   {target.Name} -> HP: {target.Health}, DEF: {target.Defence}");
+
             Console.ResetColor();
         }
 
-        /// Лог смерти юнита.
-        public void LogDeath(IUnit unit)
+        // ===== БЛИЖНИЙ БОЙ =====
+
+        public void LogHit(
+            IUnit attacker,
+            IUnit defender,
+            int damage,
+            int oldHp,
+            bool attackerIsArmy1)
         {
-            Console.ForegroundColor = ConsoleColor.Red;
+            Console.ForegroundColor =
+                attackerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+
+            Console.Write(attacker.Name);
+
+            Console.ResetColor();
+            Console.Write(" атакует ");
+
+            Console.ForegroundColor =
+                attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
+
+            Console.Write(defender.Name);
+
+            Console.ResetColor();
+            Console.WriteLine($" и наносит {damage} урона");
+
+            Console.WriteLine(
+                $"   {defender.Name} -> HP: {oldHp} -> {defender.Health}");
+        }
+
+        public void LogDeath(IUnit unit, bool isArmy1)
+        {
+            Console.ForegroundColor =
+                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+
             Console.WriteLine($"{unit.Name} погиб!");
             Console.ResetColor();
         }
 
-        public void LogInfo(string message)
+        // ===== ЛУЧНИКИ =====
+
+        public void LogArcherShot(
+            IUnit archer,
+            int range,
+            int distance,
+            bool isArmy1)
         {
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine(message);
+            Console.ForegroundColor =
+                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+
+            Console.WriteLine(
+                $"{archer.Name} стреляет на {range}, дистанция до врага {distance}");
+
             Console.ResetColor();
+        }
+
+        public void LogArrowMiss()
+        {
+            Console.WriteLine("Стрела не долетает.");
+        }
+
+        public void LogArcherHit(
+            IUnit archer,
+            IUnit target,
+            int oldHp,
+            int newHp,
+            bool isArmy1)
+        {
+            Console.ForegroundColor =
+                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+
+            Console.Write(archer.Name);
+
+            Console.ResetColor();
+            Console.Write(" попадает в ");
+
+            Console.ForegroundColor =
+                isArmy1 ? ConsoleColor.Red : ConsoleColor.White;
+
+            Console.Write(target.Name);
+
+            Console.ResetColor();
+            Console.WriteLine($" | HP: {oldHp} -> {newHp}");
+        }
+
+        public void LogNoArchers(string armyName)
+        {
+            Console.WriteLine(
+                $"В армии {armyName} лучников нет.");
         }
     }
 }
