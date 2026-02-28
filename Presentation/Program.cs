@@ -13,7 +13,7 @@ namespace Presentation
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 
             IRandomService randomService = new RandomService();
-            IBattleLogger logger = new ConsoleBattleLogger();
+            IBattleLogger logger = new RecordingBattleLogger(new ConsoleBattleLogger());
             IDamageCalculator damageCalculator = new DamageCalculator();
             IMeleeService meleeService =
                 new MeleeService(damageCalculator, logger);
