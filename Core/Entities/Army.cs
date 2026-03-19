@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using gaaameee.Core.Interfaces;
+using Core.Interfaces;
 
-namespace gaaameee.Core.Entities
+namespace Core.Entities
 {
     public class Army : IArmy
     {

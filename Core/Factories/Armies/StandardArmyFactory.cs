@@ -1,8 +1,10 @@
-﻿using gaaameee.Core.Interfaces;
-using gaaameee.Core.Entities;
-using gaaameee.Core.Factories.Units;
+﻿using Core.Entities;
+using Core.Factories.Armies;
+using Core.Factories.Units;
+using Core.Factories;
+using Core.Interfaces;
 
-namespace gaaameee.Core.Factories.Armies
+namespace Core.Factories.Armies
 {
     public class StandardArmyFactory : IArmyFactory
     {
@@ -10,12 +12,13 @@ namespace gaaameee.Core.Factories.Armies
 
         private readonly Dictionary<string, UnitCreator> _unitCreators;
 
-        // сбалансированное распределение бюджета 
-        private const double HeavyWeight = 0.3;
-        private const double LightWeight = 0.4;
-        private const double ArcherWeight = 0.3;
+        // Распределение бюджета (сбалансированное)
+        private const double HeavyWeight = 0.25;
+        private const double LightWeight = 0.30;
+        private const double ArcherWeight = 0.20;
+        private const double HealerWeight = 0.15;
+        private const double WizardWeight = 0.10;
 
-        // конструктор принимает словарь создателей
         public StandardArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {
             _unitCreators = unitCreators;
@@ -30,13 +33,16 @@ namespace gaaameee.Core.Factories.Armies
             {
                 ("Heavy", UnitFactory.HeavyCost, HeavyWeight),
                 ("Light", UnitFactory.LightCost, LightWeight),
-                ("Archer", UnitFactory.ArcherCost, ArcherWeight)
+                ("Archer", UnitFactory.ArcherCost, ArcherWeight),
+                ("Healer", UnitFactory.HealerCost, HealerWeight),
+                ("Wizard", UnitFactory.WizardCost, WizardWeight)
             };
 
             var budgets = new int[unitTypes.Count];
             for (int i = 0; i < unitTypes.Count; i++)
             {
-                int baseBudget = (int)(budget * (unitTypes[i].weight / (HeavyWeight + LightWeight + ArcherWeight)));
+                int baseBudget = (int)(budget * (unitTypes[i].weight /
+                    (HeavyWeight + LightWeight + ArcherWeight + HealerWeight + WizardWeight)));
                 int variance = (int)(baseBudget * 0.15);
                 int variation = random.Next(-variance, variance + 1);
                 budgets[i] = Math.Max(0, baseBudget + variation);
@@ -46,7 +52,9 @@ namespace gaaameee.Core.Factories.Armies
             {
                 { "Heavy", 0 },
                 { "Light", 0 },
-                { "Archer", 0 }
+                { "Archer", 0 },
+                { "Healer", 0 },
+                { "Wizard", 0 }
             };
 
             for (int i = 0; i < unitTypes.Count; i++)
@@ -55,7 +63,8 @@ namespace gaaameee.Core.Factories.Armies
                 for (int j = 0; j < count; j++)
                 {
                     counters[unitTypes[i].type]++;
-                    units.Add(_unitCreators[unitTypes[i].type].CreateUnit($"{unitTypes[i].type} {counters[unitTypes[i].type]}"));
+                    units.Add(_unitCreators[unitTypes[i].type].CreateUnit(
+                        $"{unitTypes[i].type} {counters[unitTypes[i].type]}"));
                 }
             }
 
@@ -65,7 +74,8 @@ namespace gaaameee.Core.Factories.Armies
                 var affordable = unitTypes.Where(t => t.cost <= remaining).ToList();
                 var chosen = affordable[random.Next(affordable.Count)];
                 counters[chosen.type]++;
-                units.Add(_unitCreators[chosen.type].CreateUnit($"{chosen.type} {counters[chosen.type]}"));
+                units.Add(_unitCreators[chosen.type].CreateUnit(
+                    $"{chosen.type} {counters[chosen.type]}"));
                 remaining -= chosen.cost;
             }
 
@@ -73,7 +83,8 @@ namespace gaaameee.Core.Factories.Armies
             {
                 var cheapest = unitTypes.OrderBy(t => t.cost).First();
                 counters[cheapest.type]++;
-                units.Add(_unitCreators[cheapest.type].CreateUnit($"{cheapest.type} {counters[cheapest.type]}"));
+                units.Add(_unitCreators[cheapest.type].CreateUnit(
+                    $"{cheapest.type} {counters[cheapest.type]}"));
             }
 
             return new Army(name, units);

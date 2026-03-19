@@ -1,4 +1,4 @@
-﻿namespace gaaameee.Core.Interfaces
+﻿namespace Core.Interfaces
 {
     public interface IDamageCalculator
     {

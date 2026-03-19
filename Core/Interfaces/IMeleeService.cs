@@ -1,6 +1,6 @@
-﻿using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
 
-namespace gaaameee.Core.Interfaces
+namespace Core.Interfaces
 {
     public interface IMeleeService
     {

@@ -1,5 +1,5 @@
 ﻿using System;
-using gaaameee.Core.Interfaces;
+using Core.Interfaces;
 
 namespace Services.Logging
 {

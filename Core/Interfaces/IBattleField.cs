@@ -1,6 +1,6 @@
-﻿using gaaameee.Core.Entities;
+﻿using Core.Entities;
 
-namespace gaaameee.Core.Interfaces
+namespace Core.Interfaces
 {
     public interface IBattleField
     {

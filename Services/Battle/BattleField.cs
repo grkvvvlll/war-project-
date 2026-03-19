@@ -1,14 +1,12 @@
-﻿using System;
-using System.Linq;
-using gaaameee.Core.Entities;
-using gaaameee.Core.Interfaces;
+﻿using Core.Entities;
+using Core.Interfaces;
 
 namespace Services.Battle
 {
     public class BattleField : IBattleField
     {
         private readonly IMeleeService _meleeService;
-        private readonly IArcherPhaseService _archerService;
+        private readonly SpecialAbilityService _specialAbilityService;
         private readonly IRandomService _random;
         private readonly IBattleLogger _logger;
         private int _scoreArmy1 = 0;
@@ -16,12 +14,12 @@ namespace Services.Battle
 
         public BattleField(
             IMeleeService meleeService,
-            IArcherPhaseService archerService,
+            SpecialAbilityService specialAbilityService,
             IRandomService random,
             IBattleLogger logger)
         {
             _meleeService = meleeService;
-            _archerService = archerService;
+            _specialAbilityService = specialAbilityService;
             _random = random;
             _logger = logger;
         }
@@ -33,12 +31,10 @@ namespace Services.Battle
             _logger.LogInfo(
                 $"Первой атакует: {(army1Turn ? army1.Name : army2.Name)}");
 
-            // Пауза перед началом боя (остаётся)
             Wait();
 
             while (HasAlive(army1) && HasAlive(army2))
             {
-                // Визуализация в начале раунда
                 BattleVisualizer.PrintArmyLine(army1, army2);
                 Console.WriteLine();
 
@@ -47,17 +43,17 @@ namespace Services.Battle
                     // 1. Удар Армии 1
                     _scoreArmy1 += _meleeService.Execute(army1, army2, true);
 
-                    // 2. Ответ Армии 2 (если кто-то жив)
+                    // 2. Ответ Армии 2
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _meleeService.Execute(army2, army1, false);
 
-                    // 3. Лучники Армии 1
+                    // 3. Special Abilities Армии 1
                     if (HasAlive(army1) && HasAlive(army2))
-                        _scoreArmy1 += _archerService.Execute(army1, army2, true);
+                        _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
 
-                    // 4. Лучники Армии 2
+                    // 4. Special Abilities Армии 2
                     if (HasAlive(army1) && HasAlive(army2))
-                        _scoreArmy2 += _archerService.Execute(army2, army1, false);
+                        _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
                 }
                 else
                 {
@@ -68,30 +64,25 @@ namespace Services.Battle
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _meleeService.Execute(army1, army2, true);
 
-                    // 3. Лучники Армии 2
+                    // 3. Special Abilities Армии 2
                     if (HasAlive(army1) && HasAlive(army2))
-                        _scoreArmy2 += _archerService.Execute(army2, army1, false);
+                        _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
 
-                    // 4. Лучники Армии 1
+                    // 4. Special Abilities Армии 1
                     if (HasAlive(army1) && HasAlive(army2))
-                        _scoreArmy1 += _archerService.Execute(army1, army2, true);
+                        _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
                 }
 
-                // Логирование счета
                 _logger.LogInfo($"СЧЁТ: {_scoreArmy1} : {_scoreArmy2}");
 
-                // ЕДИНСТВЕННАЯ ПАУЗА НА РАУНД
                 Wait();
 
-                // Очистка мертвых юнитов в конце раунда
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
                 turns++;
             }
 
-            string winner = HasAlive(army1)
-                ? army1.Name
-                : army2.Name;
+            string winner = HasAlive(army1) ? army1.Name : army2.Name;
             return new BattleResult(winner, turns);
         }
 

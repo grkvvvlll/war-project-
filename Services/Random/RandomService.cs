@@ -1,4 +1,4 @@
-﻿using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
 
 namespace Services.Random
 {

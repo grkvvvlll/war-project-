@@ -1,4 +1,4 @@
-﻿namespace gaaameee.Core.Entities
+﻿namespace Core.Entities
 {
     // Результат завершённого боя.
     public class BattleResult

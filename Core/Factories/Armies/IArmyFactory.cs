@@ -1,6 +1,6 @@
-﻿using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
 
-namespace gaaameee.Core.Factories.Armies
+namespace Core.Factories.Armies
 {
     public interface IArmyFactory
     {

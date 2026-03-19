@@ -1,10 +1,13 @@
-﻿using gaaameee.Core.Interfaces;
-using gaaameee.Core.Entities;
-using gaaameee.Core.Factories;
-using gaaameee.Core.Factories.Units;
-using gaaameee.Core.Factories.Armies;
+﻿using Services.Battle;
 using Services.Logging;
+using Services.Random;
 using Services.Storage;
+using Core.Entities.Units;
+using Core.Entities;
+using Core.Factories.Armies;
+using Core.Factories.Units;
+using Core.Factories;
+using Core.Interfaces;
 
 namespace Presentation
 {
@@ -15,10 +18,10 @@ namespace Presentation
         private readonly IDamageCalculator _damageCalculator;
         private readonly IBattleField _battleField;
 
-        // фабричный метод
+        // === FACTORY METHOD: Словарь создателей юнитов ===
         private readonly Dictionary<string, UnitCreator> _unitCreators;
 
-        // абстрактная фабрика
+        // === ABSTRACT FACTORY: Словарь фабрик армий ===
         private readonly Dictionary<string, IArmyFactory> _armyFactories;
 
         public ConsoleMenu(
@@ -32,15 +35,17 @@ namespace Presentation
             _damageCalculator = damageCalculator;
             _battleField = battleField;
 
-            // инициализация фабричного метода
+            // === ИНИЦИАЛИЗАЦИЯ FACTORY METHOD ===
             _unitCreators = new Dictionary<string, UnitCreator>
             {
                 { "Heavy", new HeavyUnitCreator() },
                 { "Light", new LightUnitCreator() },
-                { "Archer", new ArcherUnitCreator() }
+                { "Archer", new ArcherUnitCreator() },
+                { "Healer", new HealerUnitCreator() },
+                { "Wizard", new WizardUnitCreator(random) }
             };
 
-            // инициализация абстрактной фабрики
+            // === ИНИЦИАЛИЗАЦИЯ ABSTRACT FACTORY ===
             _armyFactories = new Dictionary<string, IArmyFactory>
             {
                 { "Standard", new StandardArmyFactory(_unitCreators) },
@@ -88,21 +93,21 @@ namespace Presentation
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
 
-            // выбор фабрики армией 1
-            Console.WriteLine("ФОРМИРОВАНИЕ АРМИИ 1");
+            // === АРМИЯ 1: ВЫБОР ФАБРИКИ ===
+            Console.WriteLine("=== ФОРМИРОВАНИЕ АРМИИ 1 ===");
             string factoryType1 = SelectArmyFactory();
 
             Console.Write("Введите стоимость для армии 1: ");
             int budget1 = ReadInt();
 
-            // выбор фабрики армией 2
-            Console.WriteLine("\nФОРМИРОВАНИЕ АРМИИ 2");
+            // === АРМИЯ 2: ВЫБОР ФАБРИКИ ===
+            Console.WriteLine("\n=== ФОРМИРОВАНИЕ АРМИИ 2 ===");
             string factoryType2 = SelectArmyFactory();
 
             Console.Write("Введите стоимость для армии 2: ");
             int budget2 = ReadInt();
 
-            // создание армий через абстрактную фабрику
+            // === СОЗДАНИЕ АРМИЙ ЧЕРЕЗ ABSTRACT FACTORY ===
             var armyFactory1 = _armyFactories[factoryType1];
             var armyFactory2 = _armyFactories[factoryType2];
 
@@ -129,12 +134,11 @@ namespace Presentation
             Console.ReadLine();
         }
 
-        // метод выбора типа фабрики
         private string SelectArmyFactory()
         {
             Console.WriteLine("Выберите тип армии:");
             Console.WriteLine("1. Стандартная (сбалансированная)");
-            Console.WriteLine("2. Сильная (больше тяжёлых)");
+            Console.WriteLine("2. Агрессивная (больше тяжёлых)");
             Console.WriteLine("3. Экономная (больше лёгких)");
             Console.Write("Ваш выбор (1-3): ");
 
@@ -153,10 +157,14 @@ namespace Presentation
             var heavyCount = army.Units.Count(u => u is HeavyUnit);
             var lightCount = army.Units.Count(u => u is LightUnit);
             var archerCount = army.Units.Count(u => u is Archer);
+            var healerCount = army.Units.Count(u => u is Healer);
+            var wizardCount = army.Units.Count(u => u is Wizard);
 
             Console.WriteLine($"🛡️ Тяжёлых: {heavyCount} × {UnitFactory.HeavyCost} = {heavyCount * UnitFactory.HeavyCost} монет");
             Console.WriteLine($"⚔️ Лёгких: {lightCount} × {UnitFactory.LightCost} = {lightCount * UnitFactory.LightCost} монет");
             Console.WriteLine($"🏹 Лучников: {archerCount} × {UnitFactory.ArcherCost} = {archerCount * UnitFactory.ArcherCost} монет");
+            Console.WriteLine($"💚 Целителей: {healerCount} × {UnitFactory.HealerCost} = {healerCount * UnitFactory.HealerCost} монет");
+            Console.WriteLine($"🔮 Магов: {wizardCount} × {UnitFactory.WizardCost} = {wizardCount * UnitFactory.WizardCost} монет");
             Console.WriteLine($"─────────────────────────────────────────");
             Console.WriteLine($"Всего юнитов: {army.Units.Count}");
             Console.WriteLine($"Итого потрачено: {army.TotalCost} монет");
@@ -169,6 +177,8 @@ namespace Presentation
                     HeavyUnit _ => "🛡️",
                     LightUnit _ => "⚔️",
                     Archer _ => "🏹",
+                    Healer _ => "💚",
+                    Wizard _ => "🔮",
                     _ => "❓"
                 };
                 Console.WriteLine($"  {icon} {unit.Name} (HP:{unit.Health} ATK:{unit.Attack} DEF:{unit.Defence})");
@@ -179,20 +189,27 @@ namespace Presentation
         {
             Console.Clear();
 
-            // используем фабричный метод
+            // === ИСПОЛЬЗУЕМ FACTORY METHOD ДЛЯ ПРИМЕРА ===
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
             var light = new LightUnitCreator().CreateUnit("Light");
             var archer = new ArcherUnitCreator().CreateUnit("Archer");
+            var healer = new HealerUnitCreator().CreateUnit("Healer");
+            var wizard = new WizardUnitCreator(new RandomService()).CreateUnit("Wizard");
 
             PrintUnitInfo("🛡️ HeavyUnit - сильный солдат:", heavy);
             PrintUnitInfo("⚔️ LightUnit - обычный солдат:", light);
             PrintUnitInfo("🏹 Archer - лучник:", archer);
+            PrintUnitInfo("💚 Healer - целитель:", healer);
+            PrintUnitInfo("🔮 Wizard - маг:", wizard);
 
             Console.WriteLine("Алгоритм игры:");
-            Console.WriteLine("Случайным образом выбирается армия, атакующая первой.");
-            Console.WriteLine("Ближайшие друг к другу солдаты вражеских армий наносят по одному удару.");
-            Console.WriteLine("Лучники обеих армий, начиная со второго, стреляют по противнику, если могут.");
-            Console.WriteLine("Убитые солдаты исчезают.");
+            Console.WriteLine("1. Случайным образом выбирается армия, атакующая первой.");
+            Console.WriteLine("2. Ближайшие друг к другу солдаты вражеских армий наносят по одному удару.");
+            Console.WriteLine("3. Юниты со SpecialAbility используют свои способности:");
+            Console.WriteLine("   - 🏹 Лучники стреляют во врагов (если не на передней линии).");
+            Console.WriteLine("   - 💚 Целители лечат союзников (кроме Heavy и себя).");
+            Console.WriteLine("   - 🔮 Маги клонируют союзников (Light или Archer) с накоплением вероятности.");
+            Console.WriteLine("4. Убитые солдаты исчезают.");
             Console.WriteLine("\nНажмите Enter для возврата в меню");
             Console.ReadLine();
         }
@@ -206,6 +223,16 @@ namespace Presentation
             Console.WriteLine($"   COST: {unit.Cost}");
             if (unit is Archer archer)
                 Console.WriteLine($"   RANGE: {archer.Range}");
+            if (unit is Healer healer)
+            {
+                Console.WriteLine($"   HEAL_RANGE: {healer.HealRange}");
+                Console.WriteLine($"   HEAL_POWER: {healer.HealPower}");
+            }
+            if (unit is Wizard wizard)
+            {
+                Console.WriteLine($"   SPELL_RANGE: {wizard.SpellRange}");
+                Console.WriteLine($"   CLONE_CHANCE: {wizard.ClonePower}%");
+            }
             Console.WriteLine();
         }
 
@@ -232,7 +259,7 @@ namespace Presentation
             if (ans != "y" && ans != "yes" && ans != "д" && ans != "да")
                 return;
 
-            // синглтон
+            // === SINGLETON ===
             var saveService = BattleSaveService.Instance;
 
             var save = new BattleSave
@@ -249,7 +276,7 @@ namespace Presentation
         {
             Console.Clear();
 
-            // синглтон
+            // === SINGLETON ===
             var saveService = BattleSaveService.Instance;
 
             var saves = saveService.ListSaves();

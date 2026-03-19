@@ -1,5 +1,5 @@
 ﻿using System.Linq;
-using gaaameee.Core.Interfaces;
+using Core.Interfaces;
 
 namespace Services.Battle
 {

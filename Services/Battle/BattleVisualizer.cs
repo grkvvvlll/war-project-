@@ -1,6 +1,6 @@
 ﻿using System;
-using gaaameee.Core.Interfaces;
-using gaaameee.Core.Entities;
+using Core.Interfaces;
+using Core.Entities.Units;
 
 namespace Services.Battle
 {
@@ -64,6 +64,10 @@ namespace Services.Battle
 
             if (unit is LightUnit)
                 return "⚔️";
+            if (unit is Wizard)
+                return "🔮";
+            if (unit is Healer)
+                return "💚";
 
             return "?";
         }

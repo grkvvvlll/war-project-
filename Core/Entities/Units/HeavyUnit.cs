@@ -1,8 +1,8 @@
-﻿using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
 
-namespace gaaameee.Core.Entities
+namespace Core.Entities.Units
 {
-    // Имеет повышенную защиту и здоровье.
+    // не может быть вылеченным
     public class HeavyUnit : Unit
     {
         public HeavyUnit(
@@ -13,7 +13,6 @@ namespace gaaameee.Core.Entities
             int cost)
             : base(name, attack, defence, health, cost)
         {
-            // Спецспособности нет
             SpecialAbility = null;
         }
     }

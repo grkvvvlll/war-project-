@@ -1,6 +1,6 @@
 using System;
 using System.Collections.Generic;
-using gaaameee.Core.Interfaces;
+using Core.Interfaces;
 
 namespace Services.Logging
 {

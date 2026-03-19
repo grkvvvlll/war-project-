@@ -1,13 +1,13 @@
-﻿using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
+using Core.Entities.Abilities;
 
-namespace gaaameee.Core.Entities
+namespace Core.Entities.Units
 {
-    public class Archer : Unit
+    // может быть исцеленным и клонированным
+    public class Archer : Unit, ICanBeHealed, ICanBeCloned
     {
-        // Дальность выстрела 
         public int Range { get; }
 
-        // Конструктор лучника.
         public Archer(
             string name,
             int attack,
@@ -18,9 +18,12 @@ namespace gaaameee.Core.Entities
             : base(name, attack, defence, health, cost)
         {
             Range = range;
-
-            // Назначаем специальную способность.
             SpecialAbility = new ArcherShotAbility(range);
+        }
+
+        public IUnit Clone(IRandomService random)
+        {
+            return new Archer(Name, Attack, Defence, MaxHealth, Cost, Range);
         }
     }
 }

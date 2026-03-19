@@ -1,8 +1,7 @@
-﻿using gaaameee.Core.Entities;
-using gaaameee.Core.Factories;
-using gaaameee.Core.Interfaces;
+﻿using Core.Interfaces;
+using Core.Entities.Units;
 
-namespace gaaameee.Core.Factories.Units
+namespace Core.Factories.Units
 {
     public class ArcherUnitCreator : UnitCreator
     {

@@ -1,32 +1,20 @@
 ﻿using System;
-using gaaameee.Core.Interfaces;
+using Core.Interfaces;
+using Core.Entities.Abilities;
 
-namespace gaaameee.Core.Entities
+namespace Core.Entities.Units
 {
     public abstract class Unit : IUnit
     {
-        // Имя юнита 
         public string Name { get; }
-
-        // Сила атаки
         public int Attack { get; }
-
-        // Защита юнита
         public int Defence { get; }
-
-        // Текущее здоровье
         public int Health { get; private set; }
-
-        // Стоимость юнита
+        public int MaxHealth { get; }
         public int Cost { get; }
-
-        // Жив ли юнит
         public bool IsAlive => Health > 0;
-
-        // Специальная способность 
         public ISpecialAbility? SpecialAbility { get; protected set; }
 
-        // Конструктор базового юнита.
         protected Unit(
             string name,
             int attack,
@@ -36,7 +24,6 @@ namespace gaaameee.Core.Entities
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Unit name cannot be empty.");
-
             if (health <= 0)
                 throw new ArgumentException("Health must be greater than zero.");
 
@@ -44,24 +31,33 @@ namespace gaaameee.Core.Entities
             Attack = attack;
             Defence = defence;
             Health = health;
+            MaxHealth = health;
             Cost = cost;
         }
 
-        // Получение урона
         public void TakeDamage(int damage)
         {
             if (damage < 0)
                 throw new ArgumentException("Damage cannot be negative.");
 
             Health -= damage;
-
             if (Health < 0)
                 Health = 0;
         }
 
+        public void Heal(int amount)
+        {
+            if (amount < 0)
+                throw new ArgumentException("Heal amount cannot be negative.");
+
+            Health += amount;
+            if (Health > MaxHealth)
+                Health = MaxHealth;
+        }
+
         public override string ToString()
         {
-            return $"{Name} (HP: {Health}, ATK: {Attack}, DEF: {Defence})";
+            return $"{Name} (HP: {Health}/{MaxHealth}, ATK: {Attack}, DEF: {Defence})";
         }
     }
 }
