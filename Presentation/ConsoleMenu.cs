@@ -263,7 +263,7 @@ namespace Presentation
             if (ans != "y" && ans != "yes" && ans != "д" && ans != "да")
                 return;
 
-            var saveService = new BattleSaveService();
+            var saveService = BattleSaveService.Instance;
             var save = new BattleSave
             {
                 Winner = result.Winner,
@@ -277,7 +277,7 @@ namespace Presentation
         private void LoadGame()
         {
             Console.Clear();
-            var saveService = new BattleSaveService();
+            var saveService = BattleSaveService.Instance;
             var saves = saveService.ListSaves();
 
             if (saves.Count == 0)

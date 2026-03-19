@@ -17,10 +17,8 @@ namespace Presentation
             IDamageCalculator damageCalculator = new DamageCalculator();
             IMeleeService meleeService =
                 new MeleeService(damageCalculator, logger);
-
             IArcherPhaseService archerService =
                 new ArcherPhaseService(logger);
-
             IBattleField battleField =
                 new BattleField(meleeService, archerService, randomService, logger);
 
