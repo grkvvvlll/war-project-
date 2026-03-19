@@ -6,7 +6,6 @@ using gaaameee.Core.Entities;
 using gaaameee.Core.Factories;
 using Services.Battle;
 using Services.Logging;
-using Services.Random;
 using Services.Storage;
 
 namespace Presentation
@@ -17,6 +16,9 @@ namespace Presentation
         private readonly IBattleLogger _logger;
         private readonly IDamageCalculator _damageCalculator;
         private readonly IBattleField _battleField;
+
+        // фабричный метод
+        private readonly Dictionary<string, UnitCreator> _unitCreators;
 
         // распределение бюджета на юнитов
         private const double HeavyWeight = 0.3;
@@ -33,6 +35,14 @@ namespace Presentation
             _logger = logger;
             _damageCalculator = damageCalculator;
             _battleField = battleField;
+
+            // инициализация фабрик
+            _unitCreators = new Dictionary<string, UnitCreator>
+            {
+                { "Heavy", new HeavyUnitCreator() },
+                { "Light", new LightUnitCreator() },
+                { "Archer", new ArcherUnitCreator() }
+            };
         }
 
         public void Run()
@@ -86,12 +96,10 @@ namespace Presentation
             Console.Clear();
             Console.WriteLine("Армии сформированы:");
             Console.WriteLine();
-
             PrintArmyComposition(army1);
             Console.WriteLine();
             PrintArmyComposition(army2);
             Console.WriteLine();
-
             Console.WriteLine("Нажмите Enter для начала боя...");
             Console.ReadLine();
 
@@ -103,7 +111,7 @@ namespace Presentation
             Console.ReadLine();
         }
 
-        // метод для создания армий по бюджету
+        // создание армий фабричным методом
         private IArmy CreateArmyByBudget(string name, int budget)
         {
             var units = new List<IUnit>();
@@ -141,47 +149,37 @@ namespace Presentation
                 for (int j = 0; j < count; j++)
                 {
                     counters[unitTypes[i].type]++;
-                    units.Add(CreateUnitByType(unitTypes[i].type, counters[unitTypes[i].type]));
+                    // используем фабрику через словарь
+                    units.Add(_unitCreators[unitTypes[i].type].CreateUnit($"{unitTypes[i].type} {counters[unitTypes[i].type]}"));
                 }
             }
 
-            // остаток бюджета случайные доступные юниты 
+            // остаток бюджета случайные доступные юниты
             int remaining = budget - units.Sum(u => u.Cost);
             while (remaining >= unitTypes.Min(t => t.cost))
             {
                 var affordable = unitTypes.Where(t => t.cost <= remaining).ToList();
                 var chosen = affordable[random.Next(affordable.Count)];
                 counters[chosen.type]++;
-                units.Add(CreateUnitByType(chosen.type, counters[chosen.type]));
+                // используем фабрику через словарь
+                units.Add(_unitCreators[chosen.type].CreateUnit($"{chosen.type} {counters[chosen.type]}"));
                 remaining -= chosen.cost;
             }
 
-            // если армия пустая — добавим хотя бы одного дешёвого юнита 
+            // если армия пустая — добавим хотя бы одного дешёвого юнита
             if (units.Count == 0 && budget > 0)
             {
                 var cheapest = unitTypes.OrderBy(t => t.cost).First();
                 counters[cheapest.type]++;
-                units.Add(CreateUnitByType(cheapest.type, counters[cheapest.type]));
+                units.Add(_unitCreators[cheapest.type].CreateUnit($"{cheapest.type} {counters[cheapest.type]}"));
             }
 
             return new Army(name, units);
         }
 
-        private IUnit CreateUnitByType(string type, int number)
-        {
-            return type switch
-            {
-                "Heavy" => UnitFactory.CreateHeavy($"Heavy {number}"),
-                "Light" => UnitFactory.CreateLight($"Light {number}"),
-                "Archer" => UnitFactory.CreateArcher($"Archer {number}"),
-                _ => UnitFactory.CreateLight($"Light {number}")
-            };
-        }
-
         private void PrintArmyComposition(IArmy army)
         {
             Console.WriteLine($"=== {army.Name} (Бюджет: {army.TotalCost} монет) ===");
-
             var heavyCount = army.Units.Count(u => u is HeavyUnit);
             var lightCount = army.Units.Count(u => u is LightUnit);
             var archerCount = army.Units.Count(u => u is Archer);
@@ -211,9 +209,11 @@ namespace Presentation
         private void ShowHelp()
         {
             Console.Clear();
-            var heavy = UnitFactory.CreateHeavy("Heavy");
-            var light = UnitFactory.CreateLight("Light");
-            var archer = UnitFactory.CreateArcher("Archer");
+
+            // используем фабрики
+            var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
+            var light = new LightUnitCreator().CreateUnit("Light");
+            var archer = new ArcherUnitCreator().CreateUnit("Archer");
 
             PrintUnitInfo("🛡️ HeavyUnit - сильный солдат:", heavy);
             PrintUnitInfo("⚔️ LightUnit - обычный солдат:", light);
@@ -257,6 +257,7 @@ namespace Presentation
                 Console.WriteLine("\n(Сохранение недоступно: логгер не RecordingBattleLogger)");
                 return;
             }
+
             Console.Write("\nСохранить бой в файл? (y/n): ");
             var ans = (Console.ReadLine() ?? "").Trim().ToLowerInvariant();
             if (ans != "y" && ans != "yes" && ans != "д" && ans != "да")
@@ -292,6 +293,7 @@ namespace Presentation
                 var s = saves[i];
                 Console.WriteLine($"{i + 1}. {s.FileName} | {s.SavedAtUtc:yyyy-MM-dd HH:mm:ss} UTC | Победитель: {s.Winner} | Ходов: {s.Turns}");
             }
+
             Console.Write("\nВведите номер сохранения (0 - назад): ");
             if (!int.TryParse(Console.ReadLine(), out int n) || n < 0 || n > saves.Count)
             {
@@ -299,6 +301,7 @@ namespace Presentation
                 Console.ReadLine();
                 return;
             }
+
             if (n == 0) return;
 
             var chosen = saves[n - 1];
@@ -309,8 +312,10 @@ namespace Presentation
             Console.WriteLine($"Сохранено (UTC): {save.SavedAtUtc:yyyy-MM-dd HH:mm:ss}");
             Console.WriteLine($"Победитель: {save.Winner}");
             Console.WriteLine($"Ходов: {save.Turns}");
+
             foreach (var line in save.LogLines)
                 Console.WriteLine(line);
+
             Console.WriteLine("Нажмите Enter для возврата в меню...");
             Console.ReadLine();
         }
