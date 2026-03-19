@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using gaaameee.Core.Interfaces;
+﻿using gaaameee.Core.Interfaces;
 using gaaameee.Core.Entities;
 using gaaameee.Core.Factories;
-using Services.Battle;
+using gaaameee.Core.Factories.Units;
+using gaaameee.Core.Factories.Armies;
 using Services.Logging;
 using Services.Storage;
 
@@ -20,10 +18,8 @@ namespace Presentation
         // фабричный метод
         private readonly Dictionary<string, UnitCreator> _unitCreators;
 
-        // распределение бюджета на юнитов
-        private const double HeavyWeight = 0.3;
-        private const double LightWeight = 0.4;
-        private const double ArcherWeight = 0.3;
+        // абстрактная фабрика
+        private readonly Dictionary<string, IArmyFactory> _armyFactories;
 
         public ConsoleMenu(
             IRandomService random,
@@ -36,12 +32,20 @@ namespace Presentation
             _damageCalculator = damageCalculator;
             _battleField = battleField;
 
-            // инициализация фабрик
+            // инициализация фабричного метода
             _unitCreators = new Dictionary<string, UnitCreator>
             {
                 { "Heavy", new HeavyUnitCreator() },
                 { "Light", new LightUnitCreator() },
                 { "Archer", new ArcherUnitCreator() }
+            };
+
+            // инициализация абстрактной фабрики
+            _armyFactories = new Dictionary<string, IArmyFactory>
+            {
+                { "Standard", new StandardArmyFactory(_unitCreators) },
+                { "Aggressive", new AggressiveArmyFactory(_unitCreators) },
+                { "Economy", new EconomyArmyFactory(_unitCreators) }
             };
         }
 
@@ -84,17 +88,31 @@ namespace Presentation
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
 
+            // выбор фабрики армией 1
+            Console.WriteLine("ФОРМИРОВАНИЕ АРМИИ 1");
+            string factoryType1 = SelectArmyFactory();
+
             Console.Write("Введите стоимость для армии 1: ");
             int budget1 = ReadInt();
+
+            // выбор фабрики армией 2
+            Console.WriteLine("\nФОРМИРОВАНИЕ АРМИИ 2");
+            string factoryType2 = SelectArmyFactory();
+
             Console.Write("Введите стоимость для армии 2: ");
             int budget2 = ReadInt();
 
-            // генерация армий по бюджету
-            var army1 = CreateArmyByBudget("Армия 1", budget1);
-            var army2 = CreateArmyByBudget("Армия 2", budget2);
+            // создание армий через абстрактную фабрику
+            var armyFactory1 = _armyFactories[factoryType1];
+            var armyFactory2 = _armyFactories[factoryType2];
+
+            var army1 = armyFactory1.CreateArmy("Армия 1", budget1);
+            var army2 = armyFactory2.CreateArmy("Армия 2", budget2);
 
             Console.Clear();
-            Console.WriteLine("Армии сформированы:");
+            Console.WriteLine($"Армии сформированы:");
+            Console.WriteLine($"  Армия 1: {armyFactory1.FactoryName}");
+            Console.WriteLine($"  Армия 2: {armyFactory2.FactoryName}");
             Console.WriteLine();
             PrintArmyComposition(army1);
             Console.WriteLine();
@@ -111,70 +129,22 @@ namespace Presentation
             Console.ReadLine();
         }
 
-        // создание армий фабричным методом
-        private IArmy CreateArmyByBudget(string name, int budget)
+        // метод выбора типа фабрики
+        private string SelectArmyFactory()
         {
-            var units = new List<IUnit>();
-            var random = new System.Random();
+            Console.WriteLine("Выберите тип армии:");
+            Console.WriteLine("1. Стандартная (сбалансированная)");
+            Console.WriteLine("2. Сильная (больше тяжёлых)");
+            Console.WriteLine("3. Экономная (больше лёгких)");
+            Console.Write("Ваш выбор (1-3): ");
 
-            // типы юнитов с их весами и стоимостью
-            var unitTypes = new List<(string type, int cost, double weight)>
+            var choice = Console.ReadLine();
+            return choice switch
             {
-                ("Heavy", UnitFactory.HeavyCost, HeavyWeight),
-                ("Light", UnitFactory.LightCost, LightWeight),
-                ("Archer", UnitFactory.ArcherCost, ArcherWeight)
+                "2" => "Aggressive",
+                "3" => "Economy",
+                _ => "Standard"
             };
-
-            var budgets = new int[unitTypes.Count];
-            for (int i = 0; i < unitTypes.Count; i++)
-            {
-                int baseBudget = (int)(budget * (unitTypes[i].weight / (HeavyWeight + LightWeight + ArcherWeight)));
-                int variance = (int)(baseBudget * 0.15);
-                int variation = random.Next(-variance, variance + 1);
-                budgets[i] = Math.Max(0, baseBudget + variation);
-            }
-
-            // нумерация внутри армий
-            var counters = new Dictionary<string, int>
-            {
-                { "Heavy", 0 },
-                { "Light", 0 },
-                { "Archer", 0 }
-            };
-
-            // создаем юнитов согласно бюджету
-            for (int i = 0; i < unitTypes.Count; i++)
-            {
-                int count = budgets[i] / unitTypes[i].cost;
-                for (int j = 0; j < count; j++)
-                {
-                    counters[unitTypes[i].type]++;
-                    // используем фабрику через словарь
-                    units.Add(_unitCreators[unitTypes[i].type].CreateUnit($"{unitTypes[i].type} {counters[unitTypes[i].type]}"));
-                }
-            }
-
-            // остаток бюджета случайные доступные юниты
-            int remaining = budget - units.Sum(u => u.Cost);
-            while (remaining >= unitTypes.Min(t => t.cost))
-            {
-                var affordable = unitTypes.Where(t => t.cost <= remaining).ToList();
-                var chosen = affordable[random.Next(affordable.Count)];
-                counters[chosen.type]++;
-                // используем фабрику через словарь
-                units.Add(_unitCreators[chosen.type].CreateUnit($"{chosen.type} {counters[chosen.type]}"));
-                remaining -= chosen.cost;
-            }
-
-            // если армия пустая — добавим хотя бы одного дешёвого юнита
-            if (units.Count == 0 && budget > 0)
-            {
-                var cheapest = unitTypes.OrderBy(t => t.cost).First();
-                counters[cheapest.type]++;
-                units.Add(_unitCreators[cheapest.type].CreateUnit($"{cheapest.type} {counters[cheapest.type]}"));
-            }
-
-            return new Army(name, units);
         }
 
         private void PrintArmyComposition(IArmy army)
@@ -191,7 +161,6 @@ namespace Presentation
             Console.WriteLine($"Всего юнитов: {army.Units.Count}");
             Console.WriteLine($"Итого потрачено: {army.TotalCost} монет");
 
-            // Показываем всех юнитов
             Console.WriteLine("\nСостав армии:");
             foreach (var unit in army.Units)
             {
@@ -210,7 +179,7 @@ namespace Presentation
         {
             Console.Clear();
 
-            // используем фабрики
+            // используем фабричный метод
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
             var light = new LightUnitCreator().CreateUnit("Light");
             var archer = new ArcherUnitCreator().CreateUnit("Archer");
@@ -263,7 +232,9 @@ namespace Presentation
             if (ans != "y" && ans != "yes" && ans != "д" && ans != "да")
                 return;
 
+            // синглтон
             var saveService = BattleSaveService.Instance;
+
             var save = new BattleSave
             {
                 Winner = result.Winner,
@@ -277,7 +248,10 @@ namespace Presentation
         private void LoadGame()
         {
             Console.Clear();
+
+            // синглтон
             var saveService = BattleSaveService.Instance;
+
             var saves = saveService.ListSaves();
 
             if (saves.Count == 0)

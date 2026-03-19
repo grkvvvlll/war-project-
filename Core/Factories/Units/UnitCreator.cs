@@ -1,6 +1,6 @@
 ﻿using gaaameee.Core.Interfaces;
 
-namespace gaaameee.Core.Factories
+namespace gaaameee.Core.Factories.Units
 {
     public abstract class UnitCreator
     {

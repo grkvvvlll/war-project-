@@ -1,8 +1,8 @@
-﻿
-using gaaameee.Core.Entities;
+﻿using gaaameee.Core.Entities;
+using gaaameee.Core.Factories;
 using gaaameee.Core.Interfaces;
 
-namespace gaaameee.Core.Factories
+namespace gaaameee.Core.Factories.Units
 {
     public class LightUnitCreator : UnitCreator
     {
