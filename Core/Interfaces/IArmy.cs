@@ -9,5 +9,6 @@
         IUnit GetFrontUnit();
         void RemoveFrontUnit();
         void RemoveDeadUnits();
+        void InsertUnit(IUnit unit, int position);
     }
 }

@@ -2,7 +2,7 @@
 {
     public interface IUnit
     {
-        string Name { get; }
+        string Name { get; set; }
         int Attack { get; }
         int Defence { get; }
         int Health { get; }

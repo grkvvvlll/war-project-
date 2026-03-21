@@ -31,5 +31,7 @@
             bool isArmy1);
 
         void LogNoArchers(string armyName);
+        void LogHeal(IUnit healer, IUnit target, int healedAmount, bool healerIsArmy1);
+        void LogHealNoEffect(IUnit healer, IUnit target, bool healerIsArmy1);
     }
 }

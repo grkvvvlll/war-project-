@@ -17,6 +17,36 @@ namespace Services.Logging
             Console.WriteLine(message);
         }
 
+        public void LogHeal(IUnit healer, IUnit target, int healedAmount, bool healerIsArmy1)
+        {
+            // Цвет целителя зависит от армии (белый или красный)
+            Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"{healer.Name} ");
+            Console.ResetColor();
+            Console.Write("лечит ");
+
+            // Цвет цели тоже зависит от армии
+            Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write(target.Name);
+            Console.ResetColor();
+            Console.WriteLine($" и восстанавливает {healedAmount} HP");
+
+            // НЕ показываем DEF для лечения!
+            Console.WriteLine($"   {target.Name} -> HP: {target.Health - healedAmount} -> {target.Health}");
+        }
+
+        public void LogHealNoEffect(IUnit healer, IUnit target, bool healerIsArmy1)
+        {
+            Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"{healer.Name} ");
+            Console.ResetColor();
+            Console.Write("выбирает ");
+            Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write(target.Name);
+            Console.ResetColor();
+            Console.WriteLine($", HP максимальное, восстанавливать нечего");
+        }
+
         public void LogSpecial(
             IUnit user,
             IUnit target,

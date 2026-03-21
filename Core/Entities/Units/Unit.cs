@@ -6,7 +6,7 @@ namespace Core.Entities.Units
 {
     public abstract class Unit : IUnit
     {
-        public string Name { get; }
+        public string Name { get; set; }
         public int Attack { get; }
         public int Defence { get; }
         public int Health { get; private set; }

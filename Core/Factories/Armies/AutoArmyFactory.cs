@@ -1,41 +1,40 @@
 ﻿using Core.Entities;
-using Core.Factories.Armies;
-using Core.Factories.Units;
-using Core.Factories;
 using Core.Interfaces;
+using Core.Factories.Units;
 
 namespace Core.Factories.Armies
 {
-    public class AggressiveArmyFactory : IArmyFactory
+    public class AutoArmyFactory : IArmyFactory
     {
-        public string FactoryName => "Сильная";
+        public string FactoryName => "Автоматическая";
 
         private readonly Dictionary<string, UnitCreator> _unitCreators;
+        private readonly System.Random _random;
 
-        // Распределение бюджета (больше тяжёлых)
-        private const double HeavyWeight = 0.40;
-        private const double LightWeight = 0.20;
-        private const double ArcherWeight = 0.15;
+        // Веса для всех 5 типов (сумма = 1.0)
+        private const double HeavyWeight = 0.25;
+        private const double LightWeight = 0.30;
+        private const double ArcherWeight = 0.20;
         private const double HealerWeight = 0.15;
         private const double WizardWeight = 0.10;
 
-        public AggressiveArmyFactory(Dictionary<string, UnitCreator> unitCreators)
+        public AutoArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {
             _unitCreators = unitCreators;
+            _random = new System.Random();
         }
 
         public IArmy CreateArmy(string name, int budget)
         {
             var units = new List<IUnit>();
-            var random = new System.Random();
 
             var unitTypes = new List<(string type, int cost, double weight)>
             {
-                ("Heavy", UnitFactory.HeavyCost, HeavyWeight),
-                ("Light", UnitFactory.LightCost, LightWeight),
-                ("Archer", UnitFactory.ArcherCost, ArcherWeight),
-                ("Healer", UnitFactory.HealerCost, HealerWeight),
-                ("Wizard", UnitFactory.WizardCost, WizardWeight)
+                ("Heavy", _unitCreators["Heavy"].UnitCost, HeavyWeight),
+                ("Light", _unitCreators["Light"].UnitCost, LightWeight),
+                ("Archer", _unitCreators["Archer"].UnitCost, ArcherWeight),
+                ("Healer", _unitCreators["Healer"].UnitCost, HealerWeight),
+                ("Wizard", _unitCreators["Wizard"].UnitCost, WizardWeight)
             };
 
             var budgets = new int[unitTypes.Count];
@@ -44,17 +43,14 @@ namespace Core.Factories.Armies
                 int baseBudget = (int)(budget * (unitTypes[i].weight /
                     (HeavyWeight + LightWeight + ArcherWeight + HealerWeight + WizardWeight)));
                 int variance = (int)(baseBudget * 0.15);
-                int variation = random.Next(-variance, variance + 1);
+                int variation = _random.Next(-variance, variance + 1);
                 budgets[i] = Math.Max(0, baseBudget + variation);
             }
 
             var counters = new Dictionary<string, int>
             {
-                { "Heavy", 0 },
-                { "Light", 0 },
-                { "Archer", 0 },
-                { "Healer", 0 },
-                { "Wizard", 0 }
+                { "Heavy", 0 }, { "Light", 0 }, { "Archer", 0 },
+                { "Healer", 0 }, { "Wizard", 0 }
             };
 
             for (int i = 0; i < unitTypes.Count; i++)
@@ -72,7 +68,7 @@ namespace Core.Factories.Armies
             while (remaining >= unitTypes.Min(t => t.cost))
             {
                 var affordable = unitTypes.Where(t => t.cost <= remaining).ToList();
-                var chosen = affordable[random.Next(affordable.Count)];
+                var chosen = affordable[_random.Next(affordable.Count)];
                 counters[chosen.type]++;
                 units.Add(_unitCreators[chosen.type].CreateUnit(
                     $"{chosen.type} {counters[chosen.type]}"));

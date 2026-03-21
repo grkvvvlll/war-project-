@@ -60,6 +60,19 @@ namespace Services.Logging
             Add($"{archer.Name} стреляет на {range}, дистанция до врага {distance}");
         }
 
+        public void LogHeal(IUnit healer, IUnit target, int healedAmount, bool healerIsArmy1)
+        {
+            _inner.LogHeal(healer, target, healedAmount, healerIsArmy1);
+            Add($"{healer.Name} лечит {target.Name} и восстанавливает {healedAmount} HP");
+            Add($"   {target.Name} -> HP: {target.Health - healedAmount} -> {target.Health}");
+        }
+
+        public void LogHealNoEffect(IUnit healer, IUnit target, bool healerIsArmy1)
+        {
+            _inner.LogHealNoEffect(healer, target, healerIsArmy1);
+            Add($"{healer.Name} выбирает {target.Name}, HP максимальное, восстанавливать нечего");
+        }
+
         public void LogArrowMiss()
         {
             _inner.LogArrowMiss();

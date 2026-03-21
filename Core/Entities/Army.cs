@@ -24,6 +24,17 @@ namespace Core.Entities
                 throw new ArgumentException("Army must contain хотя бы одного юнита.");
         }
 
+        // Core/Entities/Army.cs
+        public void InsertUnit(IUnit unit, int position)
+        {
+            if (position < 0)
+                position = 0;
+            if (position > _units.Count)
+                position = _units.Count;
+
+            _units.Insert(position, unit);
+        }
+
         // Просто возвращает текущего живого юнита (для последовательного обхода)
         private int _currentIndex = 0;
         public IUnit GetCurrentAliveUnit()

@@ -1,5 +1,4 @@
-﻿using Services.Battle;
-using Services.Logging;
+﻿using Services.Logging;
 using Services.Random;
 using Services.Storage;
 using Core.Entities.Units;
@@ -18,11 +17,10 @@ namespace Presentation
         private readonly IDamageCalculator _damageCalculator;
         private readonly IBattleField _battleField;
 
-        // === FACTORY METHOD: Словарь создателей юнитов ===
+        // factory метод для создания юнитов
         private readonly Dictionary<string, UnitCreator> _unitCreators;
-
-        // === ABSTRACT FACTORY: Словарь фабрик армий ===
-        private readonly Dictionary<string, IArmyFactory> _armyFactories;
+        private readonly AutoArmyFactory _autoFactory;
+        private readonly ManualArmyFactory _manualFactory;
 
         public ConsoleMenu(
             IRandomService random,
@@ -35,7 +33,7 @@ namespace Presentation
             _damageCalculator = damageCalculator;
             _battleField = battleField;
 
-            // === ИНИЦИАЛИЗАЦИЯ FACTORY METHOD ===
+            // ИНИЦИАЛИЗАЦИЯ FACTORY METHOD 
             _unitCreators = new Dictionary<string, UnitCreator>
             {
                 { "Heavy", new HeavyUnitCreator() },
@@ -45,13 +43,8 @@ namespace Presentation
                 { "Wizard", new WizardUnitCreator(random) }
             };
 
-            // === ИНИЦИАЛИЗАЦИЯ ABSTRACT FACTORY ===
-            _armyFactories = new Dictionary<string, IArmyFactory>
-            {
-                { "Standard", new StandardArmyFactory(_unitCreators) },
-                { "Aggressive", new AggressiveArmyFactory(_unitCreators) },
-                { "Economy", new EconomyArmyFactory(_unitCreators) }
-            };
+            _autoFactory = new AutoArmyFactory(_unitCreators);
+            _manualFactory = new ManualArmyFactory(_unitCreators);
         }
 
         public void Run()
@@ -93,31 +86,21 @@ namespace Presentation
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
 
-            // === АРМИЯ 1: ВЫБОР ФАБРИКИ ===
-            Console.WriteLine("=== ФОРМИРОВАНИЕ АРМИИ 1 ===");
-            string factoryType1 = SelectArmyFactory();
+            Console.Write("Введите бюджет для армий: ");
+            int budget = ReadInt();
 
-            Console.Write("Введите стоимость для армии 1: ");
-            int budget1 = ReadInt();
+            // === 2. АРМИЯ 1 ===
+            Console.WriteLine("\n=== АРМИЯ 1 ===");
+            var army1 = CreateArmyWithChoice("Армия 1", budget);
+            RenumberUnitsFromFront(army1, isArmy1: true);
 
-            // === АРМИЯ 2: ВЫБОР ФАБРИКИ ===
-            Console.WriteLine("\n=== ФОРМИРОВАНИЕ АРМИИ 2 ===");
-            string factoryType2 = SelectArmyFactory();
-
-            Console.Write("Введите стоимость для армии 2: ");
-            int budget2 = ReadInt();
-
-            // === СОЗДАНИЕ АРМИЙ ЧЕРЕЗ ABSTRACT FACTORY ===
-            var armyFactory1 = _armyFactories[factoryType1];
-            var armyFactory2 = _armyFactories[factoryType2];
-
-            var army1 = armyFactory1.CreateArmy("Армия 1", budget1);
-            var army2 = armyFactory2.CreateArmy("Армия 2", budget2);
+            // === 3. АРМИЯ 2 ===
+            Console.WriteLine("\n=== АРМИЯ 2 ===");
+            var army2 = CreateArmyWithChoice("Армия 2", budget);
+            RenumberUnitsFromFront(army2, isArmy1: false);
 
             Console.Clear();
-            Console.WriteLine($"Армии сформированы:");
-            Console.WriteLine($"  Армия 1: {armyFactory1.FactoryName}");
-            Console.WriteLine($"  Армия 2: {armyFactory2.FactoryName}");
+            Console.WriteLine("Армии сформированы:");
             Console.WriteLine();
             PrintArmyComposition(army1);
             Console.WriteLine();
@@ -134,21 +117,97 @@ namespace Presentation
             Console.ReadLine();
         }
 
-        private string SelectArmyFactory()
+        private IArmy CreateArmyWithChoice(string armyName, int budget)
         {
-            Console.WriteLine("Выберите тип армии:");
-            Console.WriteLine("1. Стандартная (сбалансированная)");
-            Console.WriteLine("2. Агрессивная (больше тяжёлых)");
-            Console.WriteLine("3. Экономная (больше лёгких)");
-            Console.Write("Ваш выбор (1-3): ");
-
-            var choice = Console.ReadLine();
-            return choice switch
+            while (true)
             {
-                "2" => "Aggressive",
-                "3" => "Economy",
-                _ => "Standard"
-            };
+                Console.WriteLine($"\n{armyName}:");
+                Console.WriteLine("1. Автоматическое создание");
+                Console.WriteLine("2. Ручное создание");
+                Console.Write("Выберите способ (1-2): ");
+
+                var choice = Console.ReadLine()?.Trim();
+
+                if (choice == "1")
+                {
+                    return _autoFactory.CreateArmy(armyName, budget);
+                }
+                else if (choice == "2")
+                {
+                    var unitChoices = GetManualUnitChoices(armyName, budget);
+                    return _manualFactory.CreateArmy(armyName, budget, unitChoices);
+                }
+                else
+                {
+                    // Некорректный ввод
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
+                    Console.ResetColor();
+                    Console.WriteLine();
+                }
+            }
+        }
+
+        private List<string> GetManualUnitChoices(string armyName, int budget)
+        {
+            var choices = new List<string>();
+            int spentBudget = 0;
+            int minCost = _manualFactory.GetMinUnitCost();
+
+            Console.WriteLine($"\n=== {armyName} (Бюджет: {budget} монет) ===");
+
+            while (spentBudget + minCost <= budget)
+            {
+                int remaining = budget - spentBudget;
+                Console.WriteLine($"\nОсталось: {remaining} монет");
+                Console.WriteLine("Выберите юнита:");
+                Console.WriteLine($"1. Heavy ({_manualFactory.GetUnitCost("Heavy")} монет)");
+                Console.WriteLine($"2. Light ({_manualFactory.GetUnitCost("Light")} монет)");
+                Console.WriteLine($"3. Archer ({_manualFactory.GetUnitCost("Archer")} монет)");
+                Console.WriteLine($"4. Healer ({_manualFactory.GetUnitCost("Healer")} монет)");
+                Console.WriteLine($"5. Wizard ({_manualFactory.GetUnitCost("Wizard")} монет)");
+                Console.WriteLine("0. Закончить формирование");
+                Console.Write("Ваш выбор: ");
+                var input = Console.ReadLine();
+
+                if (input == "0")
+                    break;
+
+                var unitType = input switch
+                {
+                    "1" => "Heavy",
+                    "2" => "Light",
+                    "3" => "Archer",
+                    "4" => "Healer",
+                    "5" => "Wizard",
+                    _ => null
+                };
+
+                if (unitType == null)
+                {
+                    Console.WriteLine("  Неверный выбор");
+                    continue;
+                }
+
+                int cost = _manualFactory.GetUnitCost(unitType);
+                if (cost > remaining)
+                {
+                    Console.WriteLine("  Недостаточно средств");
+                    continue;
+                }
+
+                choices.Add(unitType);
+                spentBudget += cost;
+                Console.WriteLine($"  Добавлен {unitType} (-{cost} монет)");
+            }
+
+            if (choices.Count == 0)
+            {
+                Console.WriteLine("  Армия пуста, добавлен юнит по умолчанию");
+                choices.Add("Light");
+            }
+
+            return choices;
         }
 
         private void PrintArmyComposition(IArmy army)
@@ -189,7 +248,6 @@ namespace Presentation
         {
             Console.Clear();
 
-            // === ИСПОЛЬЗУЕМ FACTORY METHOD ДЛЯ ПРИМЕРА ===
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
             var light = new LightUnitCreator().CreateUnit("Light");
             var archer = new ArcherUnitCreator().CreateUnit("Archer");
@@ -319,6 +377,35 @@ namespace Presentation
 
             Console.WriteLine("Нажмите Enter для возврата в меню...");
             Console.ReadLine();
+        }
+
+        // Перенумерация юнитов от фронта ===
+        private void RenumberUnitsFromFront(IArmy army, bool isArmy1)
+        {
+            var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
+
+            if (isArmy1)
+            {
+                // Армия 1 (левая): фронт СПРАВА, нумерация СПРАВА НАЛЕВО
+                // Юнит справа (индекс Count-1) получает номер 1
+                for (int i = 0; i < aliveUnits.Count; i++)
+                {
+                    var unit = aliveUnits[aliveUnits.Count - 1 - i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}"; // Прямое присваивание
+                }
+            }
+            else
+            {
+                // Армия 2 (правая): фронт СЛЕВА, нумерация СЛЕВА НАПРАВО
+                // Юнит слева (индекс 0) получает номер 1
+                for (int i = 0; i < aliveUnits.Count; i++)
+                {
+                    var unit = aliveUnits[i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}"; // Прямое присваивание
+                }
+            }
         }
     }
 }
