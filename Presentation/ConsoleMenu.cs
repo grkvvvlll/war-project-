@@ -7,6 +7,7 @@ using Core.Factories.Armies;
 using Core.Factories.Units;
 using Core.Factories;
 using Core.Interfaces;
+using Services.Battle;
 
 namespace Presentation
 {
@@ -110,6 +111,14 @@ namespace Presentation
             Console.ReadLine();
 
             var result = _battleField.StartBattle(army1, army2);
+
+            if (result.Winner == BattleField.SavedAndStoppedResult)
+            {
+                Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
+                return;
+            }
 
             Console.WriteLine($"\nПобедитель: {result.Winner}");
             Console.WriteLine($"Ходов: {result.Turns}");
@@ -306,7 +315,7 @@ namespace Presentation
 
         private void AskToSaveBattle(BattleResult result)
         {
-            if (_logger is not RecordingBattleLogger rec)
+            if (_logger is not IRecordingBattleLogger rec)
             {
                 Console.WriteLine("\n(Сохранение недоступно: логгер не RecordingBattleLogger)");
                 return;
@@ -317,16 +326,13 @@ namespace Presentation
             if (ans != "y" && ans != "yes" && ans != "д" && ans != "да")
                 return;
 
-            // === SINGLETON ===
-            var saveService = BattleSaveService.Instance;
+            Console.Write("Введите название сохранения: ");
+            string saveName = (Console.ReadLine() ?? "").Trim();
 
-            var save = new BattleSave
-            {
-                Winner = result.Winner,
-                Turns = result.Turns,
-                LogLines = rec.Lines.ToList()
-            };
-            var fileName = saveService.Save(save);
+            var saveService = BattleSaveService.Instance;
+            var save = saveService.CreateFinishedSave(result, rec.Lines, saveName);
+            var fileName = saveService.Save(save, saveName);
+
             Console.WriteLine($"Сохранено: saves/{fileName}");
         }
 
@@ -334,9 +340,7 @@ namespace Presentation
         {
             Console.Clear();
 
-            // === SINGLETON ===
             var saveService = BattleSaveService.Instance;
-
             var saves = saveService.ListSaves();
 
             if (saves.Count == 0)
@@ -346,36 +350,76 @@ namespace Presentation
                 return;
             }
 
-            Console.WriteLine("=== Сохранённые бои ===");
+            Console.WriteLine("=== Сохранения ===");
             for (int i = 0; i < saves.Count; i++)
             {
                 var s = saves[i];
-                Console.WriteLine($"{i + 1}. {s.FileName} | {s.SavedAtUtc:yyyy-MM-dd HH:mm:ss} UTC | Победитель: {s.Winner} | Ходов: {s.Turns}");
-            }
+                var winnerText = string.IsNullOrWhiteSpace(s.Winner) ? "бой не завершён" : s.Winner;
+                var displayName = string.IsNullOrWhiteSpace(s.DisplayName) ? s.FileName : s.DisplayName;
 
+                Console.WriteLine(
+                    $"{i + 1}. {displayName} | {s.SavedAtUtc:yyyy-MM-dd HH:mm:ss} UTC | Победитель: {winnerText} | Ходов: {s.Turns}");
+            }
             Console.Write("\nВведите номер сохранения (0 - назад): ");
             if (!int.TryParse(Console.ReadLine(), out int n) || n < 0 || n > saves.Count)
             {
-                Console.WriteLine("Неверный ввод. Enter...");
+                Console.WriteLine("Неверный ввод. Нажмите Enter.");
                 Console.ReadLine();
                 return;
             }
 
-            if (n == 0) return;
+            if (n == 0)
+                return;
 
             var chosen = saves[n - 1];
             var save = saveService.Load(chosen.FileName);
 
             Console.Clear();
-            Console.WriteLine($"=== Бой из файла: {chosen.FileName} ===");
+            Console.WriteLine($"=== Загрузка: {chosen.FileName} ===");
             Console.WriteLine($"Сохранено (UTC): {save.SavedAtUtc:yyyy-MM-dd HH:mm:ss}");
-            Console.WriteLine($"Победитель: {save.Winner}");
-            Console.WriteLine($"Ходов: {save.Turns}");
+            Console.WriteLine($"Ходов уже сыграно: {save.Turns}");
 
-            foreach (var line in save.LogLines)
-                Console.WriteLine(line);
+            if (_logger is RecordingBattleLogger rec)
+            {
+                rec.Clear();
+                foreach (var line in save.LogLines)
+                    rec.Lines.Add(line);
+            }
 
-            Console.WriteLine("Нажмите Enter для возврата в меню...");
+            if (save.IsFinished)
+            {
+                Console.WriteLine($"Победитель: {save.Winner}");
+                Console.WriteLine();
+
+                foreach (var line in save.LogLines)
+                    Console.WriteLine(line);
+
+                Console.WriteLine("\nЭто завершённый бой. Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
+                return;
+            }
+
+            var restored = saveService.RestoreBattle(save, _random);
+
+            Console.WriteLine("Бой восстановлен.");
+            Console.WriteLine($"Следующий раунд: {restored.Turns + 1}");
+            Console.WriteLine($"Следующей атакует: {(restored.Army1Turn ? restored.Army1.Name : restored.Army2.Name)}");
+            Console.WriteLine($"Счёт: {restored.ScoreArmy1} : {restored.ScoreArmy2}");
+            Console.WriteLine();
+            Console.WriteLine("Нажмите Enter, чтобы продолжить бой...");
+            Console.ReadLine();
+
+            var result = _battleField.StartBattle(
+                restored.Army1,
+                restored.Army2,
+                restored.Turns,
+                restored.Army1Turn,
+                restored.ScoreArmy1,
+                restored.ScoreArmy2);
+
+            Console.WriteLine($"\nПобедитель: {result.Winner}");
+            Console.WriteLine($"Ходов: {result.Turns}");
+            AskToSaveBattle(result);
             Console.ReadLine();
         }
 

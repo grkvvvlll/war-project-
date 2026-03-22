@@ -4,7 +4,7 @@ using Core.Interfaces;
 
 namespace Services.Logging
 {
-    public class RecordingBattleLogger : IBattleLogger
+    public class RecordingBattleLogger : IRecordingBattleLogger
     {
         private readonly IBattleLogger _inner;
 

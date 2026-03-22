@@ -3,7 +3,6 @@ using Core.Entities.Abilities;
 
 namespace Core.Entities.Units
 {
-    // не лечится, но клонируется
     public class Wizard : Unit, ICanBeCloned
     {
         public int SpellRange { get; }
@@ -25,9 +24,26 @@ namespace Core.Entities.Units
             SpecialAbility = new CloneAbility(spellRange, clonePower, random);
         }
 
+        public Wizard(
+            string name,
+            int attack,
+            int defence,
+            int health,
+            int maxHealth,
+            int cost,
+            int spellRange,
+            int clonePower,
+            IRandomService random)
+            : base(name, attack, defence, health, maxHealth, cost)
+        {
+            SpellRange = spellRange;
+            ClonePower = clonePower;
+            SpecialAbility = new CloneAbility(spellRange, clonePower, random);
+        }
+
         public IUnit Clone(IRandomService random)
         {
-            return new Wizard(Name, Attack, Defence, MaxHealth, Cost, SpellRange, ClonePower, random);
+            return new Wizard(Name, Attack, Defence, MaxHealth, MaxHealth, Cost, SpellRange, ClonePower, random);
         }
     }
 }

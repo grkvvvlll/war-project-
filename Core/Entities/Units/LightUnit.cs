@@ -2,7 +2,6 @@
 
 namespace Core.Entities.Units
 {
-    // может быть исцеленным и клонированным
     public class LightUnit : Unit, ICanBeHealed, ICanBeCloned
     {
         public LightUnit(
@@ -16,9 +15,21 @@ namespace Core.Entities.Units
             SpecialAbility = null;
         }
 
+        public LightUnit(
+            string name,
+            int attack,
+            int defence,
+            int health,
+            int maxHealth,
+            int cost)
+            : base(name, attack, defence, health, maxHealth, cost)
+        {
+            SpecialAbility = null;
+        }
+
         public IUnit Clone(IRandomService random)
         {
-            return new LightUnit(Name, Attack, Defence, MaxHealth, Cost);
+            return new LightUnit(Name, Attack, Defence, MaxHealth, MaxHealth, Cost);
         }
     }
 }

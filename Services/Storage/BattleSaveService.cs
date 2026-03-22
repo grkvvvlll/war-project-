@@ -2,63 +2,88 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.Json;
+using Core.Entities;
+using Core.Entities.Units;
+using Core.Interfaces;
 
 namespace Services.Storage
 {
     public class BattleSaveService
     {
-        // синглтон
         private static readonly BattleSaveService _instance = new BattleSaveService();
-
-        // публичная точка доступа
         public static BattleSaveService Instance => _instance;
 
         private readonly string _dir;
 
-        // приватный конструктор синглтона
         private BattleSaveService(string? savesDir = null)
         {
             _dir = savesDir ?? Path.Combine(AppContext.BaseDirectory, "saves");
             Directory.CreateDirectory(_dir);
         }
 
-        public string Save(BattleSave save)
+        public string Save(BattleSave save, string? customName = null)
         {
             save.SavedAtUtc = save.SavedAtUtc == default ? DateTime.UtcNow : save.SavedAtUtc;
-            var fileName = $"battle_{save.SavedAtUtc:yyyyMMdd_HHmmss}.json";
+
+            if (!string.IsNullOrWhiteSpace(customName))
+                save.DisplayName = customName.Trim();
+
+            if (string.IsNullOrWhiteSpace(save.DisplayName))
+                save.DisplayName = $"Сохранение {save.SavedAtUtc:yyyy-MM-dd HH:mm}";
+
+            string safeName = SanitizeFileName(save.DisplayName);
+            if (string.IsNullOrWhiteSpace(safeName))
+                safeName = $"battle_{save.SavedAtUtc:yyyyMMdd_HHmmss}";
+
+            var fileName = $"{safeName}_{save.SavedAtUtc:yyyyMMdd_HHmmss}.json";
             var path = Path.Combine(_dir, fileName);
-            var json = JsonSerializer.Serialize(save, new JsonSerializerOptions { WriteIndented = true });
-            File.WriteAllText(path, json);
+
+            var json = JsonSerializer.Serialize(
+                save,
+                new JsonSerializerOptions { WriteIndented = true });
+
+            File.WriteAllText(path, json, Encoding.UTF8);
             return fileName;
         }
 
         public BattleSave Load(string fileName)
         {
             var path = Path.Combine(_dir, fileName);
-            var json = File.ReadAllText(path);
+            var json = File.ReadAllText(path, Encoding.UTF8);
+
             var save = JsonSerializer.Deserialize<BattleSave>(json);
-            if (save == null) throw new InvalidDataException("Не удалось прочитать сохранение (пустой JSON).");
+            if (save == null)
+                throw new InvalidDataException("Не удалось прочитать сохранение.");
+
             return save;
         }
 
         public List<BattleSaveInfo> ListSaves()
         {
-            if (!Directory.Exists(_dir)) return new List<BattleSaveInfo>();
-            var files = Directory.GetFiles(_dir, "battle_*.json")
+            if (!Directory.Exists(_dir))
+                return new List<BattleSaveInfo>();
+
+            var files = Directory.GetFiles(_dir, "*.json")
                 .OrderByDescending(f => f)
                 .ToList();
+
             var result = new List<BattleSaveInfo>();
+
             foreach (var path in files)
             {
                 try
                 {
-                    var json = File.ReadAllText(path);
+                    var json = File.ReadAllText(path, Encoding.UTF8);
                     var save = JsonSerializer.Deserialize<BattleSave>(json);
-                    if (save == null) continue;
+                    if (save == null)
+                        continue;
+
                     result.Add(new BattleSaveInfo
                     {
                         FileName = Path.GetFileName(path),
+                        DisplayName = save.DisplayName,
                         SavedAtUtc = save.SavedAtUtc,
                         Winner = save.Winner,
                         Turns = save.Turns
@@ -66,10 +91,170 @@ namespace Services.Storage
                 }
                 catch
                 {
-                    // битые файлы просто пропускаем
                 }
             }
+
             return result;
+        }
+
+        public BattleSave CreateFinishedSave(
+            BattleResult result,
+            IEnumerable<string> logLines,
+            string? displayName = null)
+        {
+            return new BattleSave
+            {
+                SavedAtUtc = DateTime.UtcNow,
+                DisplayName = displayName ?? "",
+                Turns = result.Turns,
+                Army1Turn = false,
+                ScoreArmy1 = 0,
+                ScoreArmy2 = 0,
+                IsFinished = true,
+                Winner = result.Winner,
+                LogLines = logLines.ToList()
+            };
+        }
+
+        public BattleSave CreateInProgressSave(
+            IArmy army1,
+            IArmy army2,
+            int turns,
+            bool army1Turn,
+            int scoreArmy1,
+            int scoreArmy2,
+            IEnumerable<string> logLines,
+            string? displayName = null)
+        {
+            return new BattleSave
+            {
+                SavedAtUtc = DateTime.UtcNow,
+                DisplayName = displayName ?? "",
+                Turns = turns,
+                Army1Turn = army1Turn,
+                ScoreArmy1 = scoreArmy1,
+                ScoreArmy2 = scoreArmy2,
+                Army1 = MapArmy(army1),
+                Army2 = MapArmy(army2),
+                IsFinished = false,
+                Winner = "",
+                LogLines = logLines.ToList()
+            };
+        }
+
+        public BattleResumeData RestoreBattle(BattleSave save, IRandomService random)
+        {
+            if (save.IsFinished)
+            {
+                return new BattleResumeData
+                {
+                    Turns = save.Turns,
+                    Army1Turn = save.Army1Turn,
+                    ScoreArmy1 = save.ScoreArmy1,
+                    ScoreArmy2 = save.ScoreArmy2,
+                    IsFinished = true,
+                    Winner = save.Winner
+                };
+            }
+
+            return new BattleResumeData
+            {
+                Army1 = RestoreArmy(save.Army1, random),
+                Army2 = RestoreArmy(save.Army2, random),
+                Turns = save.Turns,
+                Army1Turn = save.Army1Turn,
+                ScoreArmy1 = save.ScoreArmy1,
+                ScoreArmy2 = save.ScoreArmy2,
+                IsFinished = false,
+                Winner = save.Winner
+            };
+        }
+
+        private ArmySnapshot MapArmy(IArmy army)
+        {
+            return new ArmySnapshot
+            {
+                Name = army.Name,
+                Units = army.Units.Select(MapUnit).ToList()
+            };
+        }
+
+        private UnitSnapshot MapUnit(IUnit unit)
+        {
+            var snapshot = new UnitSnapshot
+            {
+                UnitType = GetUnitType(unit),
+                Name = unit.Name,
+                Attack = unit.Attack,
+                Defence = unit.Defence,
+                Health = unit.Health,
+                MaxHealth = unit.MaxHealth,
+                Cost = unit.Cost
+            };
+
+            if (unit is Archer archer)
+            {
+                snapshot.Range = archer.Range;
+            }
+            else if (unit is Healer healer)
+            {
+                snapshot.HealRange = healer.HealRange;
+                snapshot.HealPower = healer.HealPower;
+            }
+            else if (unit is Wizard wizard)
+            {
+                snapshot.SpellRange = wizard.SpellRange;
+                snapshot.ClonePower = wizard.ClonePower;
+            }
+
+            return snapshot;
+        }
+
+        private string GetUnitType(IUnit unit)
+        {
+            if (unit is HeavyUnit) return "Heavy";
+            if (unit is LightUnit) return "Light";
+            if (unit is Archer) return "Archer";
+            if (unit is Healer) return "Healer";
+            if (unit is Wizard) return "Wizard";
+
+            throw new InvalidDataException($"Неизвестный тип юнита: {unit.GetType().Name}");
+        }
+
+        private IArmy RestoreArmy(ArmySnapshot snapshot, IRandomService random)
+        {
+            var units = snapshot.Units
+                .Select(unit => RestoreUnit(unit, random))
+                .ToList();
+
+            return new Army(snapshot.Name, units);
+        }
+
+        private IUnit RestoreUnit(UnitSnapshot dto, IRandomService random)
+        {
+            return dto.UnitType switch
+            {
+                "Heavy" => new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
+                "Light" => new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
+                "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
+                "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0),
+                "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
+                _ => throw new InvalidDataException($"Неизвестный тип юнита: {dto.UnitType}")
+            };
+        }
+
+        private string SanitizeFileName(string name)
+        {
+            var invalid = Path.GetInvalidFileNameChars();
+            var result = new StringBuilder();
+
+            foreach (char c in name)
+            {
+                if (!invalid.Contains(c))
+                    result.Append(c);
+            }
+
+            return result.ToString().Trim().Replace(" ", "_");
         }
     }
 }

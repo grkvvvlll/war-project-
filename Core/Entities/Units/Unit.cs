@@ -1,6 +1,5 @@
 ﻿using System;
 using Core.Interfaces;
-using Core.Entities.Abilities;
 
 namespace Core.Entities.Units
 {
@@ -9,8 +8,8 @@ namespace Core.Entities.Units
         public string Name { get; set; }
         public int Attack { get; }
         public int Defence { get; }
-        public int Health { get; private set; }
-        public int MaxHealth { get; }
+        public int Health { get; protected set; }
+        public int MaxHealth { get; protected set; }
         public int Cost { get; }
         public bool IsAlive => Health > 0;
         public ISpecialAbility? SpecialAbility { get; protected set; }
@@ -21,17 +20,32 @@ namespace Core.Entities.Units
             int defence,
             int health,
             int cost)
+            : this(name, attack, defence, health, health, cost)
+        {
+        }
+
+        protected Unit(
+            string name,
+            int attack,
+            int defence,
+            int health,
+            int maxHealth,
+            int cost)
         {
             if (string.IsNullOrWhiteSpace(name))
                 throw new ArgumentException("Unit name cannot be empty.");
-            if (health <= 0)
-                throw new ArgumentException("Health must be greater than zero.");
+            if (health < 0)
+                throw new ArgumentException("Health cannot be negative.");
+            if (maxHealth <= 0)
+                throw new ArgumentException("MaxHealth must be greater than zero.");
+            if (health > maxHealth)
+                throw new ArgumentException("Health cannot be greater than MaxHealth.");
 
             Name = name;
             Attack = attack;
             Defence = defence;
             Health = health;
-            MaxHealth = health;
+            MaxHealth = maxHealth;
             Cost = cost;
         }
 
