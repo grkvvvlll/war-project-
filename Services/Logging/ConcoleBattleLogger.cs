@@ -9,10 +9,10 @@ namespace Services.Logging
         private void SlowWrite(string text)
         {
             Console.WriteLine(text);
-            Thread.Sleep(70);
+            Thread.Sleep(30);
         }
 
-        public void Log(string message)
+        public void Log(string message) 
         {
             Console.ResetColor();
             SlowWrite(message);

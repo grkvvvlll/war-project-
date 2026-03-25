@@ -99,7 +99,7 @@ namespace Services.Battle
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
 
-                PrintArmyState(army1, army2);
+                
 
                 turns++;
                 currentArmy1Turn = !currentArmy1Turn;
@@ -112,7 +112,7 @@ namespace Services.Battle
 
                 if (_autoMode)
                 {
-                    Thread.Sleep(1500);
+                    Thread.Sleep(1000);
                 }
             }
 
@@ -195,24 +195,24 @@ namespace Services.Battle
         {
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army1.Name}:");
-            Thread.Sleep(70);
+            Thread.Sleep(30);
             foreach (var unit in army1.Units)
             {
                 Console.WriteLine($"  {unit}");
-                Thread.Sleep(70);
+                Thread.Sleep(30);
             }
 
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army2.Name}:");
-            Thread.Sleep(70);
+            Thread.Sleep(30);
             foreach (var unit in army2.Units)
             {
                 Console.WriteLine($"  {unit}");
-                Thread.Sleep(70);
+                Thread.Sleep(30);
             }
 
             Console.WriteLine();
-            Thread.Sleep(70);
+            Thread.Sleep(30);
         }
     }
 }
