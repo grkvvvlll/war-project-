@@ -36,7 +36,14 @@ namespace Core.Entities.Units
 
         public IUnit Clone(IRandomService random)
         {
-            return new Archer(Name, Attack, Defence, MaxHealth, MaxHealth, Cost, Range);
+            return new Archer(
+                Name + " (клон)",
+                Attack,
+                Defence,
+                Health,      // Текущее HP
+                MaxHealth,
+                Cost,
+                Range);
         }
     }
 }

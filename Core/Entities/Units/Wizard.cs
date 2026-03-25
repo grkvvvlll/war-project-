@@ -43,7 +43,16 @@ namespace Core.Entities.Units
 
         public IUnit Clone(IRandomService random)
         {
-            return new Wizard(Name, Attack, Defence, MaxHealth, MaxHealth, Cost, SpellRange, ClonePower, random);
+            return new Wizard(
+                Name + " (клон)",
+                Attack,      // Текущая атака
+                Defence,     // Текущая защита
+                Health,      
+                MaxHealth,   
+                Cost,
+                SpellRange,
+                ClonePower,
+                random);
         }
     }
 }

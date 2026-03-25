@@ -12,11 +12,11 @@ namespace Core.Factories.Armies
         private readonly System.Random _random;
 
         // Веса для всех 5 типов (сумма = 1.0)
-        private const double HeavyWeight = 0.25;
-        private const double LightWeight = 0.30;
+        private const double HeavyWeight = 0.20;
+        private const double LightWeight = 0.20;
         private const double ArcherWeight = 0.20;
-        private const double HealerWeight = 0.15;
-        private const double WizardWeight = 0.10;
+        private const double HealerWeight = 0.20;
+        private const double WizardWeight = 0.20;
 
         public AutoArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {

@@ -29,7 +29,13 @@ namespace Core.Entities.Units
 
         public IUnit Clone(IRandomService random)
         {
-            return new LightUnit(Name, Attack, Defence, MaxHealth, MaxHealth, Cost);
+            return new LightUnit(
+                Name + " (клон)",
+                Attack,
+                Defence,
+                Health,      // Текущее HP
+                MaxHealth,
+                Cost);
         }
     }
 }

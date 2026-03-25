@@ -44,7 +44,7 @@ namespace Services.Logging
             Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write(target.Name);
             Console.ResetColor();
-            Console.WriteLine($", HP максимальное, восстанавливать нечего");
+            Console.WriteLine($", HP максимальное, юнит в лечении не нуждается");
         }
 
         public void LogSpecial(

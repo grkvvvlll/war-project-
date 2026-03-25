@@ -70,7 +70,7 @@ namespace Services.Logging
         public void LogHealNoEffect(IUnit healer, IUnit target, bool healerIsArmy1)
         {
             _inner.LogHealNoEffect(healer, target, healerIsArmy1);
-            Add($"{healer.Name} выбирает {target.Name}, HP максимальное, восстанавливать нечего");
+            Add($"{healer.Name} выбирает {target.Name}, HP максимальное, юнит в лечении не нуждается");
         }
 
         public void LogArrowMiss()

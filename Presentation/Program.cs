@@ -16,6 +16,7 @@ namespace Presentation
             IDamageCalculator damageCalculator = new DamageCalculator();
             IMeleeService meleeService = new MeleeService(damageCalculator, logger);
 
+            // Передаём IRandomService в SpecialAbilityService
             SpecialAbilityService specialAbilityService = new SpecialAbilityService(logger);
 
             IBattleField battleField = new BattleField(

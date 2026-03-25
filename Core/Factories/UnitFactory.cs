@@ -34,7 +34,7 @@
         public const int WizardDefence = 3;
         public const int WizardHP = 10;
         public const int WizardCost = 60;
-        public const int WizardRange = 10;
-        public const int WizardCloneChance = 20;
+        public const int WizardRange = 4;
+        public const int WizardCloneChance = 10;
     }
 }
