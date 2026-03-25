@@ -110,7 +110,7 @@ namespace Presentation
             Console.WriteLine("Нажмите Enter для начала боя...");
             Console.ReadLine();
 
-            var result = _battleField.StartBattle(army1, army2);
+            var result = _battleField.StartBattle(army1, army2, autoMode: false);
 
             if (result.Winner == BattleField.SavedAndStoppedResult)
             {
@@ -415,7 +415,8 @@ namespace Presentation
                 restored.Turns,
                 restored.Army1Turn,
                 restored.ScoreArmy1,
-                restored.ScoreArmy2);
+                restored.ScoreArmy2,
+                autoMode: false);
 
             Console.WriteLine($"\nПобедитель: {result.Winner}");
             Console.WriteLine($"Ходов: {result.Turns}");

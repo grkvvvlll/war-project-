@@ -1,6 +1,7 @@
 ﻿using Core.Entities;
 using Core.Interfaces;
 using Services.Storage;
+using System.Threading;
 
 namespace Services.Battle
 {
@@ -15,6 +16,7 @@ namespace Services.Battle
 
         private int _scoreArmy1 = 0;
         private int _scoreArmy2 = 0;
+        private bool _autoMode = false;
 
         public BattleField(
             IMeleeService meleeService,
@@ -34,8 +36,10 @@ namespace Services.Battle
             int turns = 0,
             bool? army1Turn = null,
             int scoreArmy1 = 0,
-            int scoreArmy2 = 0)
+            int scoreArmy2 = 0,
+            bool autoMode = false)
         {
+            _autoMode = autoMode;
             _scoreArmy1 = scoreArmy1;
             _scoreArmy2 = scoreArmy2;
 
@@ -52,8 +56,11 @@ namespace Services.Battle
                 _logger.LogInfo($"Текущий счёт: {_scoreArmy1} : {_scoreArmy2}");
             }
 
-            if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
-                return new BattleResult(SavedAndStoppedResult, turns);
+            if (!_autoMode)
+            {
+                if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
+                    return new BattleResult(SavedAndStoppedResult, turns);
+            }
 
             while (HasAlive(army1) && HasAlive(army2))
             {
@@ -92,13 +99,20 @@ namespace Services.Battle
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
 
+                PrintArmyState(army1, army2);
+
                 turns++;
                 currentArmy1Turn = !currentArmy1Turn;
 
-                if (HasAlive(army1) && HasAlive(army2))
+                if (!_autoMode && HasAlive(army1) && HasAlive(army2))
                 {
                     if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
                         return new BattleResult(SavedAndStoppedResult, turns);
+                }
+
+                if (_autoMode)
+                {
+                    Thread.Sleep(1500);
                 }
             }
 
@@ -122,6 +136,7 @@ namespace Services.Battle
                 Console.WriteLine("Enter - следующий раунд");
                 Console.WriteLine("1 - показать состав армий");
                 Console.WriteLine("2 - сохранить и выйти в меню");
+                Console.WriteLine("3 - проиграть до конца");
                 Console.Write("Ваш выбор: ");
 
                 string input = (Console.ReadLine() ?? "").Trim();
@@ -139,6 +154,12 @@ namespace Services.Battle
                 {
                     SaveBattle(army1, army2, turns, army1Turn);
                     return false;
+                }
+
+                if (input == "3")
+                {
+                    _autoMode = true;
+                    return true;
                 }
 
                 Console.WriteLine("Неизвестная команда.");
@@ -174,15 +195,24 @@ namespace Services.Battle
         {
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army1.Name}:");
+            Thread.Sleep(70);
             foreach (var unit in army1.Units)
+            {
                 Console.WriteLine($"  {unit}");
+                Thread.Sleep(70);
+            }
 
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army2.Name}:");
+            Thread.Sleep(70);
             foreach (var unit in army2.Units)
+            {
                 Console.WriteLine($"  {unit}");
+                Thread.Sleep(70);
+            }
 
             Console.WriteLine();
+            Thread.Sleep(70);
         }
     }
 }

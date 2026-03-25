@@ -10,6 +10,7 @@ namespace Core.Interfaces
             int turns = 0,
             bool? army1Turn = null,
             int scoreArmy1 = 0,
-            int scoreArmy2 = 0);
+            int scoreArmy2 = 0,
+            bool autoMode = false);
     }
 }

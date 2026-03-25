@@ -1,38 +1,42 @@
 ﻿using System;
+using System.Threading;
 using Core.Interfaces;
 
 namespace Services.Logging
 {
     public class ConsoleBattleLogger : IBattleLogger
     {
+        private void SlowWrite(string text)
+        {
+            Console.WriteLine(text);
+            Thread.Sleep(70);
+        }
+
         public void Log(string message)
         {
             Console.ResetColor();
-            Console.WriteLine(message);
+            SlowWrite(message);
         }
 
         public void LogInfo(string message)
         {
             Console.ResetColor();
-            Console.WriteLine(message);
+            SlowWrite(message);
         }
 
         public void LogHeal(IUnit healer, IUnit target, int healedAmount, bool healerIsArmy1)
         {
-            // Цвет целителя зависит от армии (белый или красный)
             Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write($"{healer.Name} ");
             Console.ResetColor();
             Console.Write("лечит ");
 
-            // Цвет цели тоже зависит от армии
             Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write(target.Name);
             Console.ResetColor();
-            Console.WriteLine($" и восстанавливает {healedAmount} HP");
+            SlowWrite($" и восстанавливает {healedAmount} HP");
 
-            // НЕ показываем DEF для лечения!
-            Console.WriteLine($"   {target.Name} -> HP: {target.Health - healedAmount} -> {target.Health}");
+            SlowWrite($"   {target.Name} -> HP: {target.Health - healedAmount} -> {target.Health}");
         }
 
         public void LogHealNoEffect(IUnit healer, IUnit target, bool healerIsArmy1)
@@ -44,7 +48,7 @@ namespace Services.Logging
             Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write(target.Name);
             Console.ResetColor();
-            Console.WriteLine($", HP максимальное, юнит в лечении не нуждается");
+            SlowWrite($", HP максимальное, юнит в лечении не нуждается");
         }
 
         public void LogSpecial(
@@ -63,18 +67,14 @@ namespace Services.Logging
             Console.Write(target.Name);
 
             Console.ResetColor();
-            Console.WriteLine($" и наносит {damage} урона");
+            SlowWrite($" и наносит {damage} урона");
 
             Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine(
-                $"   {user.Name} -> HP: {user.Health}, DEF: {user.Defence}");
-            Console.WriteLine(
-                $"   {target.Name} -> HP: {target.Health}, DEF: {target.Defence}");
+            SlowWrite($"   {user.Name} -> HP: {user.Health}, DEF: {user.Defence}");
+            SlowWrite($"   {target.Name} -> HP: {target.Health}, DEF: {target.Defence}");
 
             Console.ResetColor();
         }
-
-        // ===== БЛИЖНИЙ БОЙ =====
 
         public void LogHit(
             IUnit attacker,
@@ -83,85 +83,58 @@ namespace Services.Logging
             int oldHp,
             bool attackerIsArmy1)
         {
-            Console.ForegroundColor =
-                attackerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-
+            Console.ForegroundColor = attackerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write(attacker.Name);
 
             Console.ResetColor();
             Console.Write(" атакует ");
 
-            Console.ForegroundColor =
-                attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
-
+            Console.ForegroundColor = attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
             Console.Write(defender.Name);
 
             Console.ResetColor();
-            Console.WriteLine($" и наносит {damage} урона");
+            SlowWrite($" и наносит {damage} урона");
 
-            Console.WriteLine(
-                $"   {defender.Name} -> HP: {oldHp} -> {defender.Health}");
+            SlowWrite($"   {defender.Name} -> HP: {oldHp} -> {defender.Health}");
         }
 
         public void LogDeath(IUnit unit, bool isArmy1)
         {
-            Console.ForegroundColor =
-                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-
-            Console.WriteLine($"{unit.Name} погиб!");
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            SlowWrite($"{unit.Name} погиб!");
             Console.ResetColor();
         }
 
-        // ===== ЛУЧНИКИ =====
-
-        public void LogArcherShot(
-            IUnit archer,
-            int range,
-            int distance,
-            bool isArmy1)
+        public void LogArcherShot(IUnit archer, int range, int distance, bool isArmy1)
         {
-            Console.ForegroundColor =
-                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-
-            Console.WriteLine(
-                $"{archer.Name} стреляет на {range}, дистанция до врага {distance}");
-
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            SlowWrite($"{archer.Name} стреляет на {range}, дистанция до врага {distance}");
             Console.ResetColor();
         }
 
         public void LogArrowMiss()
         {
-            Console.WriteLine("Стрела не долетает.");
+            SlowWrite("Стрела не долетает.");
         }
 
-        public void LogArcherHit(
-            IUnit archer,
-            IUnit target,
-            int oldHp,
-            int newHp,
-            bool isArmy1)
+        public void LogArcherHit(IUnit archer, IUnit target, int oldHp, int newHp, bool isArmy1)
         {
-            Console.ForegroundColor =
-                isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write(archer.Name);
 
             Console.ResetColor();
             Console.Write(" попадает в ");
 
-            Console.ForegroundColor =
-                isArmy1 ? ConsoleColor.Red : ConsoleColor.White;
-
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.Red : ConsoleColor.White;
             Console.Write(target.Name);
 
             Console.ResetColor();
-            Console.WriteLine($" | HP: {oldHp} -> {newHp}");
+            SlowWrite($" | HP: {oldHp} -> {newHp}");
         }
 
         public void LogNoArchers(string armyName)
         {
-            Console.WriteLine(
-                $"В армии {armyName} лучников нет.");
+            SlowWrite($"В армии {armyName} лучников нет.");
         }
     }
 }
