@@ -1,5 +1,6 @@
 ﻿using Core.Interfaces;
 using Core.Entities.Units;
+using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -10,12 +11,14 @@ namespace Core.Factories.Units
 
         public override IUnit CreateUnit(string name)
         {
-            return new HeavyUnit(
+            var unit = new HeavyUnit(
                 name,
                 UnitFactory.HeavyAttack,
                 UnitFactory.HeavyDefence,
                 UnitFactory.HeavyHP,
                 UnitFactory.HeavyCost);
+
+            return new HeavyUnitProxy(unit);
         }
     }
 }

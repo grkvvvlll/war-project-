@@ -19,7 +19,7 @@ namespace Core.Entities.Units
             SpecialAbility = null; // У Гуляй-города нет способности
         }
 
-        public new void TakeDamage(int damage)
+        public override void TakeDamage(int damage)
         {
             if (damage < 0) return;
 
@@ -32,6 +32,6 @@ namespace Core.Entities.Units
             // Обновляем здоровье адаптера
             Health = _original.HasDestroyed ? 0 : _original.GetHealth();
         }
-        public new bool IsAlive => !_original.HasDestroyed;
+        public override bool IsAlive => !_original.HasDestroyed;
     }
 }

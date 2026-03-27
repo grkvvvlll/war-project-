@@ -11,7 +11,7 @@ namespace Core.Entities.Units
         public int Health { get; protected set; }
         public int MaxHealth { get; protected set; }
         public int Cost { get; }
-        public bool IsAlive => Health > 0;
+        public virtual bool IsAlive => Health > 0;
         public ISpecialAbility? SpecialAbility { get; protected set; }
 
         protected Unit(
@@ -49,7 +49,7 @@ namespace Core.Entities.Units
             Cost = cost;
         }
 
-        public void TakeDamage(int damage)
+        public virtual void TakeDamage(int damage)
         {
             if (damage < 0)
                 throw new ArgumentException("Damage cannot be negative.");
@@ -59,7 +59,7 @@ namespace Core.Entities.Units
                 Health = 0;
         }
 
-        public void Heal(int amount)
+        public virtual void Heal(int amount)
         {
             if (amount < 0)
                 throw new ArgumentException("Heal amount cannot be negative.");

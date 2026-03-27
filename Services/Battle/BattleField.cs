@@ -8,6 +8,7 @@ namespace Services.Battle
     public class BattleField : IBattleField
     {
         public const string SavedAndStoppedResult = "Бой сохранён и остановлен";
+        public const string StoppedWithoutSaveResult = "Бой остановлен без сохранения";
 
         private readonly IMeleeService _meleeService;
         private readonly SpecialAbilityService _specialAbilityService;
@@ -17,6 +18,7 @@ namespace Services.Battle
         private int _scoreArmy1 = 0;
         private int _scoreArmy2 = 0;
         private bool _autoMode = false;
+        private bool _exitWithoutSave = false;
 
         public BattleField(
             IMeleeService meleeService,
@@ -37,11 +39,13 @@ namespace Services.Battle
             bool? army1Turn = null,
             int scoreArmy1 = 0,
             int scoreArmy2 = 0,
-            bool autoMode = false)
+            bool autoMode = false,
+            bool showRoundMenuBeforeFirstRound = true)
         {
             _autoMode = autoMode;
             _scoreArmy1 = scoreArmy1;
             _scoreArmy2 = scoreArmy2;
+            _exitWithoutSave = false;
 
             bool currentArmy1Turn = army1Turn ?? (_random.Next(0, 2) == 0);
 
@@ -56,10 +60,12 @@ namespace Services.Battle
                 _logger.LogInfo($"Текущий счёт: {_scoreArmy1} : {_scoreArmy2}");
             }
 
-            if (!_autoMode)
+            if (!_autoMode && showRoundMenuBeforeFirstRound)
             {
                 if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
-                    return new BattleResult(SavedAndStoppedResult, turns);
+                    return new BattleResult(
+                        _exitWithoutSave ? StoppedWithoutSaveResult : SavedAndStoppedResult,
+                        turns);
             }
 
             while (HasAlive(army1) && HasAlive(army2))
@@ -107,7 +113,9 @@ namespace Services.Battle
                 if (!_autoMode && HasAlive(army1) && HasAlive(army2))
                 {
                     if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
-                        return new BattleResult(SavedAndStoppedResult, turns);
+                        return new BattleResult(
+                            _exitWithoutSave ? StoppedWithoutSaveResult : SavedAndStoppedResult,
+                            turns);
                 }
 
                 if (_autoMode)
@@ -137,6 +145,7 @@ namespace Services.Battle
                 Console.WriteLine("1 - показать состав армий");
                 Console.WriteLine("2 - сохранить и выйти в меню");
                 Console.WriteLine("3 - проиграть до конца");
+                Console.WriteLine("4 - выйти в меню без сохранения");
                 Console.Write("Ваш выбор: ");
 
                 string input = (Console.ReadLine() ?? "").Trim();
@@ -160,6 +169,12 @@ namespace Services.Battle
                 {
                     _autoMode = true;
                     return true;
+                }
+
+                if (input == "4")
+                {
+                    _exitWithoutSave = true;
+                    return false;
                 }
 
                 Console.WriteLine("Неизвестная команда.");

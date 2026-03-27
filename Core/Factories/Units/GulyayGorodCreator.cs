@@ -1,6 +1,7 @@
 ﻿using Core.Entities.Units;
 using Core.Interfaces;
 using MedievalRussia;
+using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -10,15 +11,17 @@ namespace Core.Factories.Units
         {
             var original = new GulyayGorod(50, 6);
 
-            return new GulyayGorodAdapter(
+            var unit = new GulyayGorodAdapter(
                 name,
-                50,      // здоровье
-                6,       // защита
-                UnitFactory.GulyayGorodCost,  // стоимость из фабрики
+                50,     // здоровье
+                6,      // защита
+                UnitFactory.GulyayGorodCost,   // стоимость из фабрики
                 original);
-        }
 
+            return new GulyayGorodAdapterProxy(unit);
+        }
         public override string UnitTypeName => "GulyayGorod";
         public override int UnitCost => UnitFactory.GulyayGorodCost;
     }
 }
+

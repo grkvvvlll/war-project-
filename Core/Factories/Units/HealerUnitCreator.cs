@@ -1,5 +1,6 @@
 ﻿using Core.Entities.Units;
 using Core.Interfaces;
+using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -10,7 +11,7 @@ namespace Core.Factories.Units
 
         public override IUnit CreateUnit(string name)
         {
-            return new Healer(
+            var unit = new Healer(
                 name,
                 UnitFactory.HealerAttack,
                 UnitFactory.HealerDefence,
@@ -18,6 +19,8 @@ namespace Core.Factories.Units
                 UnitFactory.HealerCost,
                 UnitFactory.HealerRange,
                 UnitFactory.HealerPower);
+
+            return new HealerProxy(unit);
         }
     }
 }

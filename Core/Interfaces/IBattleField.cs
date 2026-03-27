@@ -11,6 +11,7 @@ namespace Core.Interfaces
             bool? army1Turn = null,
             int scoreArmy1 = 0,
             int scoreArmy2 = 0,
-            bool autoMode = false);
+            bool autoMode = false,
+            bool showRoundMenuBeforeFirstRound = true);
     }
 }

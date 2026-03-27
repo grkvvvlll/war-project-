@@ -1,5 +1,6 @@
 ﻿using Core.Interfaces;
 using Core.Entities.Units;
+using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -10,13 +11,15 @@ namespace Core.Factories.Units
 
         public override IUnit CreateUnit(string name)
         {
-            return new Archer(
+            var unit = new Archer(
                 name,
                 UnitFactory.ArcherAttack,
                 UnitFactory.ArcherDefence,
                 UnitFactory.ArcherHP,
                 UnitFactory.ArcherCost,
                 UnitFactory.ArcherRange);
+
+            return new ArcherProxy(unit);
         }
     }
 }

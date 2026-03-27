@@ -121,6 +121,13 @@ namespace Presentation
                 Console.ReadLine();
                 return;
             }
+            if (result.Winner == BattleField.StoppedWithoutSaveResult)
+            {
+                Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
+                return;
+            }
 
             Console.WriteLine($"\nПобедитель: {result.Winner}");
             Console.WriteLine($"Ходов: {result.Turns}");
@@ -368,6 +375,7 @@ namespace Presentation
                 Console.WriteLine(
                     $"{i + 1}. {displayName} | {s.SavedAtUtc:yyyy-MM-dd HH:mm:ss} UTC | Победитель: {winnerText} | Ходов: {s.Turns}");
             }
+
             Console.Write("\nВведите номер сохранения (0 - назад): ");
             if (!int.TryParse(Console.ReadLine(), out int n) || n < 0 || n > saves.Count)
             {
@@ -424,7 +432,24 @@ namespace Presentation
                 restored.Army1Turn,
                 restored.ScoreArmy1,
                 restored.ScoreArmy2,
-                autoMode: false);
+                autoMode: false,
+                showRoundMenuBeforeFirstRound: false);
+
+            if (result.Winner == BattleField.SavedAndStoppedResult)
+            {
+                Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
+                return;
+            }
+
+            if (result.Winner == BattleField.StoppedWithoutSaveResult)
+            {
+                Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
+                return;
+            }
 
             Console.WriteLine($"\nПобедитель: {result.Winner}");
             Console.WriteLine($"Ходов: {result.Turns}");

@@ -6,6 +6,7 @@ using System.Text;
 using System.Text.Json;
 using Core.Entities;
 using Core.Entities.Units;
+using Core.Entities.Units.Proxies;
 using Core.Interfaces;
 
 namespace Services.Storage
@@ -235,12 +236,24 @@ namespace Services.Storage
         {
             return dto.UnitType switch
             {
-                "Heavy" => new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
-                "Light" => new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
-                "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
-                "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0),
-                "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
+                "Heavy" => new HeavyUnitProxy(
+                    new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost)),
+
+                "Light" => new LightUnitProxy(
+                    new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost)),
+
+                "Archer" => new ArcherProxy(
+                    new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0)),
+
+                "Healer" => new HealerProxy(
+                    new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0)),
+
+                "Wizard" => new WizardProxy(
+                    new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
+                    random),
+
                 "GulyayGorod" => CreateGulyayGorod(dto),
+
                 _ => throw new InvalidDataException($"Неизвестный тип юнита: {dto.UnitType}")
             };
         }
@@ -261,16 +274,16 @@ namespace Services.Storage
 
         private IUnit CreateGulyayGorod(UnitSnapshot dto)
         {
-            // Создаём объект из библиотеки MedievalRussia
             var original = new MedievalRussia.GulyayGorod(dto.Health, dto.Defence);
 
-            // Оборачиваем в адаптер
-            return new GulyayGorodAdapter(
+            var unit = new GulyayGorodAdapter(
                 dto.Name,
                 dto.Health,
                 dto.Defence,
                 dto.Cost,
                 original);
+
+            return new GulyayGorodAdapterProxy(unit);
         }
     }
 }
