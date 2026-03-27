@@ -11,4 +11,11 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+	<ItemGroup>
+		<Reference Include="MedievalRussia">
+			<HintPath>..\libs\MedievalRussia.dll</HintPath>
+			<CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+		</Reference>
+	</ItemGroup>
+
 </Project>

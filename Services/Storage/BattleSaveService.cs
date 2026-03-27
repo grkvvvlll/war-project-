@@ -217,6 +217,7 @@ namespace Services.Storage
             if (unit is Archer) return "Archer";
             if (unit is Healer) return "Healer";
             if (unit is Wizard) return "Wizard";
+            if (unit is GulyayGorodAdapter) return "GulyayGorod";
 
             throw new InvalidDataException($"Неизвестный тип юнита: {unit.GetType().Name}");
         }
@@ -239,6 +240,7 @@ namespace Services.Storage
                 "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
                 "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0),
                 "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
+                "GulyayGorod" => CreateGulyayGorod(dto),
                 _ => throw new InvalidDataException($"Неизвестный тип юнита: {dto.UnitType}")
             };
         }
@@ -255,6 +257,20 @@ namespace Services.Storage
             }
 
             return result.ToString().Trim().Replace(" ", "_");
+        }
+
+        private IUnit CreateGulyayGorod(UnitSnapshot dto)
+        {
+            // Создаём объект из библиотеки MedievalRussia
+            var original = new MedievalRussia.GulyayGorod(dto.Health, dto.Defence);
+
+            // Оборачиваем в адаптер
+            return new GulyayGorodAdapter(
+                dto.Name,
+                dto.Health,
+                dto.Defence,
+                dto.Cost,
+                original);
         }
     }
 }

@@ -32,7 +32,7 @@ namespace Core.Factories.Armies
             var counters = new Dictionary<string, int>
             {
                 { "Heavy", 0 }, { "Light", 0 }, { "Archer", 0 },
-                { "Healer", 0 }, { "Wizard", 0 }
+                { "Healer", 0 }, { "Wizard", 0 }, { "GulyayGorod", 0 }
             };
 
             foreach (var choice in unitChoices)

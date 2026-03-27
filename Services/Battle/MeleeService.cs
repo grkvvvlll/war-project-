@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using Core.Entities.Units;
 using Core.Interfaces;
 
 namespace Services.Battle
@@ -30,6 +31,9 @@ namespace Services.Battle
                 : defenderArmy.Units.LastOrDefault(u => u.IsAlive);
 
             if (attacker == null || defender == null)
+                return 0;
+            // не может атаковать
+            if (attacker is GulyayGorodAdapter)
                 return 0;
 
             int damage =

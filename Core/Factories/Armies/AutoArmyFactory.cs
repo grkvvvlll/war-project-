@@ -11,12 +11,12 @@ namespace Core.Factories.Armies
         private readonly Dictionary<string, UnitCreator> _unitCreators;
         private readonly System.Random _random;
 
-        // Веса для всех 5 типов (сумма = 1.0)
-        private const double HeavyWeight = 0.20;
-        private const double LightWeight = 0.20;
-        private const double ArcherWeight = 0.20;
-        private const double HealerWeight = 0.20;
-        private const double WizardWeight = 0.20;
+        private const double HeavyWeight = 0.17;
+        private const double LightWeight = 0.17;
+        private const double ArcherWeight = 0.17;
+        private const double HealerWeight = 0.17;
+        private const double WizardWeight = 0.17;
+        private const double GulyayGorodWeight = 0.15;
 
         public AutoArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {
@@ -34,14 +34,15 @@ namespace Core.Factories.Armies
                 ("Light", _unitCreators["Light"].UnitCost, LightWeight),
                 ("Archer", _unitCreators["Archer"].UnitCost, ArcherWeight),
                 ("Healer", _unitCreators["Healer"].UnitCost, HealerWeight),
-                ("Wizard", _unitCreators["Wizard"].UnitCost, WizardWeight)
+                ("Wizard", _unitCreators["Wizard"].UnitCost, WizardWeight),
+                ("GulyayGorod", _unitCreators["GulyayGorod"].UnitCost, GulyayGorodWeight)
             };
 
             var budgets = new int[unitTypes.Count];
             for (int i = 0; i < unitTypes.Count; i++)
             {
                 int baseBudget = (int)(budget * (unitTypes[i].weight /
-                    (HeavyWeight + LightWeight + ArcherWeight + HealerWeight + WizardWeight)));
+                    (HeavyWeight + LightWeight + ArcherWeight + HealerWeight + WizardWeight + GulyayGorodWeight)));
                 int variance = (int)(baseBudget * 0.15);
                 int variation = _random.Next(-variance, variance + 1);
                 budgets[i] = Math.Max(0, baseBudget + variation);
@@ -50,7 +51,7 @@ namespace Core.Factories.Armies
             var counters = new Dictionary<string, int>
             {
                 { "Heavy", 0 }, { "Light", 0 }, { "Archer", 0 },
-                { "Healer", 0 }, { "Wizard", 0 }
+                { "Healer", 0 }, { "Wizard", 0 }, { "GulyayGorod", 0 }
             };
 
             for (int i = 0; i < unitTypes.Count; i++)

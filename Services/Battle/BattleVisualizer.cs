@@ -68,6 +68,8 @@ namespace Services.Battle
                 return "🔮";
             if (unit is Healer)
                 return "💚";
+            if (unit is GulyayGorodAdapter)
+                return "🏰";
 
             return "?";
         }

@@ -2,6 +2,8 @@
 {
     public static class UnitFactory
     {
+        public const int GulyayGorodCost = 70;
+
         // HEAVY 
         public const int HeavyAttack = 10;
         public const int HeavyDefence = 6;

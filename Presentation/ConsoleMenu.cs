@@ -1,13 +1,14 @@
-﻿using Services.Logging;
-using Services.Random;
-using Services.Storage;
-using Core.Entities.Units;
+﻿using System;
 using Core.Entities;
+using Core.Entities.Units;
+using Core.Factories;
 using Core.Factories.Armies;
 using Core.Factories.Units;
-using Core.Factories;
 using Core.Interfaces;
 using Services.Battle;
+using Services.Logging;
+using Services.Random;
+using Services.Storage;
 
 namespace Presentation
 {
@@ -41,7 +42,8 @@ namespace Presentation
                 { "Light", new LightUnitCreator() },
                 { "Archer", new ArcherUnitCreator() },
                 { "Healer", new HealerUnitCreator() },
-                { "Wizard", new WizardUnitCreator(random) }
+                { "Wizard", new WizardUnitCreator(random) },
+                { "GulyayGorod", new GulyayGorodCreator() }
             };
 
             _autoFactory = new AutoArmyFactory(_unitCreators);
@@ -175,6 +177,7 @@ namespace Presentation
                 Console.WriteLine($"3. Archer ({_manualFactory.GetUnitCost("Archer")} монет)");
                 Console.WriteLine($"4. Healer ({_manualFactory.GetUnitCost("Healer")} монет)");
                 Console.WriteLine($"5. Wizard ({_manualFactory.GetUnitCost("Wizard")} монет)");
+                Console.WriteLine($"6. GulyayGorod ({_manualFactory.GetUnitCost("GulyayGorod")} монет)");
                 Console.WriteLine("0. Закончить формирование");
                 Console.Write("Ваш выбор: ");
                 var input = Console.ReadLine();
@@ -189,6 +192,7 @@ namespace Presentation
                     "3" => "Archer",
                     "4" => "Healer",
                     "5" => "Wizard",
+                    "6" => "GulyayGorod",
                     _ => null
                 };
 
@@ -227,12 +231,14 @@ namespace Presentation
             var archerCount = army.Units.Count(u => u is Archer);
             var healerCount = army.Units.Count(u => u is Healer);
             var wizardCount = army.Units.Count(u => u is Wizard);
+            var gulyayCount = army.Units.Count(u => u is GulyayGorodAdapter);
 
             Console.WriteLine($"🛡️ Тяжёлых: {heavyCount} × {UnitFactory.HeavyCost} = {heavyCount * UnitFactory.HeavyCost} монет");
             Console.WriteLine($"⚔️ Лёгких: {lightCount} × {UnitFactory.LightCost} = {lightCount * UnitFactory.LightCost} монет");
             Console.WriteLine($"🏹 Лучников: {archerCount} × {UnitFactory.ArcherCost} = {archerCount * UnitFactory.ArcherCost} монет");
             Console.WriteLine($"💚 Целителей: {healerCount} × {UnitFactory.HealerCost} = {healerCount * UnitFactory.HealerCost} монет");
             Console.WriteLine($"🔮 Магов: {wizardCount} × {UnitFactory.WizardCost} = {wizardCount * UnitFactory.WizardCost} монет");
+            Console.WriteLine($"🏰 Гуляй-город: {gulyayCount} × {UnitFactory.GulyayGorodCost} = {gulyayCount * UnitFactory.GulyayGorodCost} монет");
             Console.WriteLine($"─────────────────────────────────────────");
             Console.WriteLine($"Всего юнитов: {army.Units.Count}");
             Console.WriteLine($"Итого потрачено: {army.TotalCost} монет");
@@ -247,6 +253,7 @@ namespace Presentation
                     Archer _ => "🏹",
                     Healer _ => "💚",
                     Wizard _ => "🔮",
+                    GulyayGorodAdapter _ => "🏰",
                     _ => "❓"
                 };
                 Console.WriteLine($"  {icon} {unit.Name} (HP:{unit.Health} ATK:{unit.Attack} DEF:{unit.Defence})");
@@ -268,6 +275,7 @@ namespace Presentation
             PrintUnitInfo("🏹 Archer - лучник:", archer);
             PrintUnitInfo("💚 Healer - целитель:", healer);
             PrintUnitInfo("🔮 Wizard - маг:", wizard);
+            Console.WriteLine("🏰 Гуляй-город: огромная защита, не атакует, не лечится, не клонируется.\n");
 
             Console.WriteLine("Алгоритм игры:");
             Console.WriteLine("1. Случайным образом выбирается армия, атакующая первой.");
