@@ -2,6 +2,8 @@
 using Core.Interfaces;
 using Services.Storage;
 using System.Threading;
+using System.Linq;
+using Core.Entities.Units;
 
 namespace Services.Battle
 {
@@ -9,6 +11,7 @@ namespace Services.Battle
     {
         public const string SavedAndStoppedResult = "Бой сохранён и остановлен";
         public const string StoppedWithoutSaveResult = "Бой остановлен без сохранения";
+        public const string DrawResult = "Ничья";  
 
         private readonly IMeleeService _meleeService;
         private readonly SpecialAbilityService _specialAbilityService;
@@ -19,6 +22,14 @@ namespace Services.Battle
         private int _scoreArmy2 = 0;
         private bool _autoMode = false;
         private bool _exitWithoutSave = false;
+
+        // отслеживание состояния для ничьей
+        private int _unchangedTurnsCount = 0;
+        private int _previousTotalHp1 = 0;
+        private int _previousTotalHp2 = 0;
+        private int _previousAliveCount1 = 0;
+        private int _previousAliveCount2 = 0;
+        private const int MAX_UNCHANGED_TURNS = 10;  // лимит ходов без изменений
 
         public BattleField(
             IMeleeService meleeService,
@@ -47,6 +58,13 @@ namespace Services.Battle
             _scoreArmy2 = scoreArmy2;
             _exitWithoutSave = false;
 
+            // сброс счётчиков при начале боя
+            _unchangedTurnsCount = 0;
+            _previousTotalHp1 = GetTotalHealth(army1);
+            _previousTotalHp2 = GetTotalHealth(army2);
+            _previousAliveCount1 = GetAliveCount(army1);
+            _previousAliveCount2 = GetAliveCount(army2);
+
             bool currentArmy1Turn = army1Turn ?? (_random.Next(0, 2) == 0);
 
             if (turns == 0)
@@ -73,29 +91,29 @@ namespace Services.Battle
                 BattleVisualizer.PrintArmyLine(army1, army2);
                 Console.WriteLine();
 
+                // проверяем, остались ли только Гуляй-города
+                if (IsOnlyGulyayGorodVsGulyayGorod(army1, army2))
+                {
+                    _logger.LogInfo("Остались только крепости с обеих сторон!");
+                }
+
                 if (currentArmy1Turn)
                 {
                     _scoreArmy1 += _meleeService.Execute(army1, army2, true);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _meleeService.Execute(army2, army1, false);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
                 }
                 else
                 {
                     _scoreArmy2 += _meleeService.Execute(army2, army1, false);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _meleeService.Execute(army1, army2, true);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
-
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
                 }
@@ -104,10 +122,40 @@ namespace Services.Battle
 
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
-
-                
-
                 turns++;
+
+                // проверяем изменения состояния
+                int currentTotalHp1 = GetTotalHealth(army1);
+                int currentTotalHp2 = GetTotalHealth(army2);
+                int currentAliveCount1 = GetAliveCount(army1);
+                int currentAliveCount2 = GetAliveCount(army2);
+
+                bool hasChanges =
+                    currentTotalHp1 != _previousTotalHp1 ||
+                    currentTotalHp2 != _previousTotalHp2 ||
+                    currentAliveCount1 != _previousAliveCount1 ||
+                    currentAliveCount2 != _previousAliveCount2;
+
+                if (hasChanges)
+                {
+                    _unchangedTurnsCount = 0;  // сброс счётчика
+                }
+                else
+                {
+                    _unchangedTurnsCount++;  // увеличиваем счётчик
+                    if (_unchangedTurnsCount >= MAX_UNCHANGED_TURNS)
+                    {
+                        _logger.LogInfo($" {MAX_UNCHANGED_TURNS} ходов без изменений — объявляется ничья");
+                        return new BattleResult(DrawResult, turns);
+                    }
+                }
+
+                // Сохраняем текущее состояние для следующего хода
+                _previousTotalHp1 = currentTotalHp1;
+                _previousTotalHp2 = currentTotalHp2;
+                _previousAliveCount1 = currentAliveCount1;
+                _previousAliveCount2 = currentAliveCount2;
+
                 currentArmy1Turn = !currentArmy1Turn;
 
                 if (!_autoMode && HasAlive(army1) && HasAlive(army2))
@@ -128,6 +176,26 @@ namespace Services.Battle
             return new BattleResult(winner, turns);
         }
 
+        private int GetTotalHealth(IArmy army)
+        {
+            return army.Units.Where(u => u.IsAlive).Sum(u => u.Health);
+        }
+
+        private int GetAliveCount(IArmy army)
+        {
+            return army.Units.Count(u => u.IsAlive);
+        }
+
+        private bool IsOnlyGulyayGorodVsGulyayGorod(IArmy army1, IArmy army2)
+        {
+            var alive1 = army1.Units.Where(u => u.IsAlive).ToList();
+            var alive2 = army2.Units.Where(u => u.IsAlive).ToList();
+
+            return alive1.Count == 1 && alive2.Count == 1 &&
+                   alive1[0] is GulyayGorodAdapter &&
+                   alive2[0] is GulyayGorodAdapter;
+        }
+
         private bool HasAlive(IArmy army)
         {
             return army.Units.Any(u => u.IsAlive);
@@ -138,7 +206,6 @@ namespace Services.Battle
             while (true)
             {
                 int shownRound = turns + 1;
-
                 Console.WriteLine();
                 Console.WriteLine($"МЕНЮ (перед {shownRound}-м раундом)");
                 Console.WriteLine("Enter - следующий раунд");
@@ -147,36 +214,29 @@ namespace Services.Battle
                 Console.WriteLine("3 - проиграть до конца");
                 Console.WriteLine("4 - выйти в меню без сохранения");
                 Console.Write("Ваш выбор: ");
-
                 string input = (Console.ReadLine() ?? "").Trim();
-
                 if (string.IsNullOrEmpty(input))
                     return true;
-
                 if (input == "1")
                 {
                     PrintArmyState(army1, army2);
                     continue;
                 }
-
                 if (input == "2")
                 {
                     SaveBattle(army1, army2, turns, army1Turn);
                     return false;
                 }
-
                 if (input == "3")
                 {
                     _autoMode = true;
                     return true;
                 }
-
                 if (input == "4")
                 {
                     _exitWithoutSave = true;
                     return false;
                 }
-
                 Console.WriteLine("Неизвестная команда.");
             }
         }
@@ -188,10 +248,8 @@ namespace Services.Battle
                 Console.WriteLine("Сохранение недоступно: логгер не поддерживает запись.");
                 return;
             }
-
             Console.Write("Введите название сохранения: ");
             string saveName = (Console.ReadLine() ?? "").Trim();
-
             var save = BattleSaveService.Instance.CreateInProgressSave(
                 army1,
                 army2,
@@ -201,7 +259,6 @@ namespace Services.Battle
                 _scoreArmy2,
                 rec.Lines,
                 saveName);
-
             string fileName = BattleSaveService.Instance.Save(save, saveName);
             Console.WriteLine($"Игра сохранена: {fileName}");
         }
@@ -216,7 +273,6 @@ namespace Services.Battle
                 Console.WriteLine($"  {unit}");
                 Thread.Sleep(30);
             }
-
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army2.Name}:");
             Thread.Sleep(30);
@@ -225,7 +281,6 @@ namespace Services.Battle
                 Console.WriteLine($"  {unit}");
                 Thread.Sleep(30);
             }
-
             Console.WriteLine();
             Thread.Sleep(30);
         }

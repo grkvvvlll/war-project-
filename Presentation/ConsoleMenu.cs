@@ -114,6 +114,14 @@ namespace Presentation
 
             var result = _battleField.StartBattle(army1, army2, autoMode: false);
 
+            if (result.Winner == BattleField.DrawResult)  // ← НОВОЕ
+            {
+                Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
+                AskToSaveBattle(result);
+                Console.ReadLine();
+                return;
+            }
+
             if (result.Winner == BattleField.SavedAndStoppedResult)
             {
                 Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
