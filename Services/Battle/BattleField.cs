@@ -1,9 +1,10 @@
-﻿using Core.Entities;
+﻿using System.Linq;
+using System.Threading;
+using Core.Entities;
+using Core.Entities.Buffs;
+using Core.Entities.Units;
 using Core.Interfaces;
 using Services.Storage;
-using System.Threading;
-using System.Linq;
-using Core.Entities.Units;
 
 namespace Services.Battle
 {
@@ -122,6 +123,8 @@ namespace Services.Battle
 
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
+                CleanBrokenBuffs(army1);
+                CleanBrokenBuffs(army2);
                 turns++;
 
                 // проверяем изменения состояния
@@ -284,5 +287,19 @@ namespace Services.Battle
             Console.WriteLine();
             Thread.Sleep(30);
         }
+
+        private void CleanBrokenBuffs(IArmy army)
+        {
+            for (int i = 0; i < army.Units.Count; i++)
+            {
+                if (army.Units[i] is UnitDecorator decorator && decorator.IsBroken())
+                {
+                    // Заменяем декоратор на внутренний юнит
+                    ((Army)army).SetUnit(i, decorator.GetInnerUnit());
+                    _logger.LogInfo($"{decorator.GetInnerUnit().Name} потерял экипировку!");
+                }
+            }
+        }
+
     }
 }

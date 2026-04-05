@@ -1,18 +1,15 @@
 ﻿using Core.Interfaces;
+using Core.Entities.Abilities;
 
 namespace Core.Entities.Units
 {
     public class LightUnit : Unit, ICanBeHealed, ICanBeCloned
     {
-        public LightUnit(
-            string name,
-            int attack,
-            int defence,
-            int health,
-            int cost)
-            : base(name, attack, defence, health, cost)
+        private IRandomService random;
+
+        public LightUnit(string name, int attack, int defence, int health, int cost, IRandomService random) : base(name, attack, defence, health, cost)
         {
-            SpecialAbility = null;
+            this.random = random;
         }
 
         public LightUnit(
@@ -21,10 +18,11 @@ namespace Core.Entities.Units
             int defence,
             int health,
             int maxHealth,
-            int cost)
+            int cost,
+            IRandomService random)
             : base(name, attack, defence, health, maxHealth, cost)
         {
-            SpecialAbility = null;
+            SpecialAbility = new SquireAbility(random);
         }
 
         public IUnit Clone(IRandomService random)
@@ -35,7 +33,8 @@ namespace Core.Entities.Units
                 Defence,
                 Health,      // Текущее HP
                 MaxHealth,
-                Cost);
+                Cost,
+                random);
         }
     }
 }

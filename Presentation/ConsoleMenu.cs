@@ -39,7 +39,7 @@ namespace Presentation
             _unitCreators = new Dictionary<string, UnitCreator>
             {
                 { "Heavy", new HeavyUnitCreator() },
-                { "Light", new LightUnitCreator() },
+                { "Light", new LightUnitCreator(random) },
                 { "Archer", new ArcherUnitCreator() },
                 { "Healer", new HealerUnitCreator() },
                 { "Wizard", new WizardUnitCreator(random) },
@@ -280,7 +280,7 @@ namespace Presentation
             Console.Clear();
 
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
-            var light = new LightUnitCreator().CreateUnit("Light");
+            var light = new LightUnitCreator(_random).CreateUnit("Light");
             var archer = new ArcherUnitCreator().CreateUnit("Archer");
             var healer = new HealerUnitCreator().CreateUnit("Healer");
             var wizard = new WizardUnitCreator(new RandomService()).CreateUnit("Wizard");

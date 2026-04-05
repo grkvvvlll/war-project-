@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Core.Interfaces;
+﻿using Core.Interfaces;
 
 namespace Core.Entities
 {
@@ -73,6 +70,14 @@ namespace Core.Entities
         public void RemoveDeadUnits()
         {
             _units.RemoveAll(u => !u.IsAlive);
+        }
+
+        public void SetUnit(int index, IUnit unit)
+        {
+            if (index >= 0 && index < _units.Count)
+            {
+                _units[index] = unit;
+            }
         }
     }
 }

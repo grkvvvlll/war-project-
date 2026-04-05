@@ -240,7 +240,7 @@ namespace Services.Storage
                     new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost)),
 
                 "Light" => new LightUnitProxy(
-                    new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost)),
+                    new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, random), random),
 
                 "Archer" => new ArcherProxy(
                     new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0)),

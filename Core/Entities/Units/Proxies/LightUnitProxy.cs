@@ -1,9 +1,11 @@
+using Core.Interfaces;
+
 namespace Core.Entities.Units.Proxies
 {
     public class LightUnitProxy : LightUnit
     {
-        public LightUnitProxy(LightUnit source)
-            : base(source.Name, source.Attack, source.Defence, source.Health, source.MaxHealth, source.Cost)
+        public LightUnitProxy(LightUnit source, IRandomService random) // Добавлен параметр random
+            : base(source.Name, source.Attack, source.Defence, source.Health, source.MaxHealth, source.Cost, random) // Передан в base
         {
         }
 
@@ -11,9 +13,7 @@ namespace Core.Entities.Units.Proxies
         {
             int oldHp = Health;
             bool wasAlive = IsAlive;
-
             base.TakeDamage(damage);
-
             UnitProxySupport.AfterDamage(this, damage, oldHp, wasAlive);
         }
     }

@@ -6,6 +6,13 @@ namespace Core.Factories.Units
 {
     public class LightUnitCreator : UnitCreator
     {
+        private readonly IRandomService _random; // Добавлено поле
+
+        public LightUnitCreator(IRandomService random) // Добавлен конструктор
+        {
+            _random = random;
+        }
+
         public override string UnitTypeName => "Light";
         public override int UnitCost => UnitFactory.LightCost;
 
@@ -16,9 +23,9 @@ namespace Core.Factories.Units
                 UnitFactory.LightAttack,
                 UnitFactory.LightDefence,
                 UnitFactory.LightHP,
-                UnitFactory.LightCost);
-
-            return new LightUnitProxy(unit);
+                UnitFactory.LightCost,
+                _random); // Передаем random
+            return new LightUnitProxy(unit, _random);
         }
     }
 }
