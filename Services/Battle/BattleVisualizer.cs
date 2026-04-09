@@ -1,6 +1,4 @@
-﻿using System;
-using Core.Entities.Buffs;
-using Core.Entities.Units;
+﻿using Core.Entities.Units;
 using Core.Interfaces;
 
 namespace Services.Battle
@@ -57,19 +55,25 @@ namespace Services.Battle
 
         private static string GetIcon(IUnit unit)
         {
-            // Если это декоратор, смотрим внутрь
-            IUnit actualUnit = unit;
-            while (actualUnit is UnitDecorator decorator)
+            // Раскручиваем декораторы
+            IUnit current = unit;
+            while (current is Core.Entities.Buffs.UnitDecorator decorator)
             {
-                actualUnit = decorator.GetInnerUnit();
+                current = decorator.GetInnerUnit();
             }
 
-            if (actualUnit is Archer) return "🏹";
-            if (actualUnit is HeavyUnit) return "🛡️";
-            if (actualUnit is LightUnit) return "⚔️";
-            if (actualUnit is Wizard) return "🔮";
-            if (actualUnit is Healer) return "💚";
-            if (actualUnit is GulyayGorodAdapter) return "🏰";
+            if (current is Archer)
+                return "🏹";
+            if (current is HeavyUnit)
+                return "🛡️";
+            if (current is LightUnit)
+                return "⚔️";
+            if (current is Wizard)
+                return "🔮";
+            if (current is Healer)
+                return "💚";
+            if (current is GulyayGorodAdapter)
+                return "🏰";
             return "?";
         }
     }

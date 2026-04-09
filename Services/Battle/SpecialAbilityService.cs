@@ -277,7 +277,7 @@ namespace Services.Battle
                     {
                         _logger.LogArrowMiss();
                     }
-                    else if (target.Health < oldHp)
+                    else 
                     {
                         _logger.LogArcherHit(unit, target, oldHp, target.Health, isArmy1);
                     }

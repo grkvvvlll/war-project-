@@ -1,5 +1,4 @@
-﻿using System;
-using Core.Entities;
+﻿using Core.Entities;
 using Core.Entities.Units;
 using Core.Factories;
 using Core.Factories.Armies;
@@ -241,12 +240,14 @@ namespace Presentation
         private void PrintArmyComposition(IArmy army)
         {
             Console.WriteLine($"=== {army.Name} (Бюджет: {army.TotalCost} монет) ===");
-            var heavyCount = army.Units.Count(u => u is HeavyUnit);
-            var lightCount = army.Units.Count(u => u is LightUnit);
-            var archerCount = army.Units.Count(u => u is Archer);
-            var healerCount = army.Units.Count(u => u is Healer);
-            var wizardCount = army.Units.Count(u => u is Wizard);
-            var gulyayCount = army.Units.Count(u => u is GulyayGorodAdapter);
+
+            // Для подсчета статистики нужно заглядывать внутрь декораторов
+            var heavyCount = army.Units.Count(u => GetBaseType(u) == typeof(HeavyUnit));
+            var lightCount = army.Units.Count(u => GetBaseType(u) == typeof(LightUnit));
+            var archerCount = army.Units.Count(u => GetBaseType(u) == typeof(Archer));
+            var healerCount = army.Units.Count(u => GetBaseType(u) == typeof(Healer));
+            var wizardCount = army.Units.Count(u => GetBaseType(u) == typeof(Wizard));
+            var gulyayCount = army.Units.Count(u => GetBaseType(u) == typeof(GulyayGorodAdapter));
 
             Console.WriteLine($"🛡️ Тяжёлых: {heavyCount} × {UnitFactory.HeavyCost} = {heavyCount * UnitFactory.HeavyCost} монет");
             Console.WriteLine($"⚔️ Лёгких: {lightCount} × {UnitFactory.LightCost} = {lightCount * UnitFactory.LightCost} монет");
@@ -257,20 +258,11 @@ namespace Presentation
             Console.WriteLine($"─────────────────────────────────────────");
             Console.WriteLine($"Всего юнитов: {army.Units.Count}");
             Console.WriteLine($"Итого потрачено: {army.TotalCost} монет");
-
             Console.WriteLine("\nСостав армии:");
+
             foreach (var unit in army.Units)
             {
-                string icon = unit switch
-                {
-                    HeavyUnit _ => "🛡️",
-                    LightUnit _ => "⚔️",
-                    Archer _ => "🏹",
-                    Healer _ => "💚",
-                    Wizard _ => "🔮",
-                    GulyayGorodAdapter _ => "🏰",
-                    _ => "❓"
-                };
+                string icon = GetUnitTypeIcon(unit);
                 Console.WriteLine($"  {icon} {unit.Name} (HP:{unit.Health} ATK:{unit.Attack} DEF:{unit.Defence})");
             }
         }
@@ -492,6 +484,37 @@ namespace Presentation
                     unit.Name = $"{unitType} {i + 1}"; // Прямое присваивание
                 }
             }
+        }
+
+        private string GetUnitTypeIcon(IUnit unit)
+        {
+            // Раскручиваем декораторы до базового юнита
+            IUnit current = unit;
+            while (current is Core.Entities.Buffs.UnitDecorator decorator)
+            {
+                current = decorator.GetInnerUnit();
+            }
+
+            return current switch
+            {
+                HeavyUnit _ => "🛡️",
+                LightUnit _ => "⚔️",
+                Archer _ => "🏹",
+                Healer _ => "💚",
+                Wizard _ => "🔮",
+                GulyayGorodAdapter _ => "🏰",
+                _ => "❓"
+            };
+        }
+
+        private Type GetBaseType(IUnit unit)
+        {
+            IUnit current = unit;
+            while (current is Core.Entities.Buffs.UnitDecorator decorator)
+            {
+                current = decorator.GetInnerUnit();
+            }
+            return current.GetType();
         }
     }
 }

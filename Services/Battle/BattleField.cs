@@ -103,6 +103,8 @@ namespace Services.Battle
                     _scoreArmy1 += _meleeService.Execute(army1, army2, true);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _meleeService.Execute(army2, army1, false);
+                    CleanAndLogBrokenBuffs(army1, true);
+                    CleanAndLogBrokenBuffs(army2, false);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
                     if (HasAlive(army1) && HasAlive(army2))
@@ -113,6 +115,8 @@ namespace Services.Battle
                     _scoreArmy2 += _meleeService.Execute(army2, army1, false);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _meleeService.Execute(army1, army2, true);
+                    CleanAndLogBrokenBuffs(army2, false);
+                    CleanAndLogBrokenBuffs(army1, true);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
                     if (HasAlive(army1) && HasAlive(army2))
@@ -273,15 +277,17 @@ namespace Services.Battle
             Thread.Sleep(30);
             foreach (var unit in army1.Units)
             {
-                Console.WriteLine($"  {unit}");
+                // Явное форматирование вместо неявного ToString()
+                Console.WriteLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
                 Thread.Sleep(30);
             }
+
             Console.WriteLine();
             Console.WriteLine($"Состав армии {army2.Name}:");
             Thread.Sleep(30);
             foreach (var unit in army2.Units)
             {
-                Console.WriteLine($"  {unit}");
+                Console.WriteLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
                 Thread.Sleep(30);
             }
             Console.WriteLine();
@@ -301,5 +307,25 @@ namespace Services.Battle
             }
         }
 
+        private void CleanAndLogBrokenBuffs(IArmy army, bool isArmy1)
+        {
+            // Проходим с конца, чтобы безопасно заменять элементы в списке
+            for (int i = army.Units.Count - 1; i >= 0; i--)
+            {
+                if (army.Units[i] is Core.Entities.Buffs.UnitDecorator decorator && decorator.BrokenBuff != null)
+                {
+                    string buffName = decorator.BrokenBuff.NameNominative; // "Шлем", "Конь" и т.д.
+                    string unitName = decorator.GetInnerUnit().Name;       // Имя юнита без этого баффа
+
+                    Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+                    Console.Write($"{unitName} ");
+                    Console.ResetColor();
+                    Console.WriteLine($"потерял {buffName}!");
+
+                    // Снимаем декоратор: заменяем его в армии на "голый" юнит внутри
+                    ((Army)army).SetUnit(i, decorator.GetInnerUnit());
+                }
+            }
+        }
     }
 }

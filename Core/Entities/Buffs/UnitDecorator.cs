@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Core.Interfaces;
+﻿using Core.Interfaces;
 
 namespace Core.Entities.Buffs
 {
@@ -10,6 +7,7 @@ namespace Core.Entities.Buffs
         protected readonly IUnit _unit;
         protected readonly IBuff _buff;
         private bool _isBroken = false;
+        public IBuff? BrokenBuff { get; private set; }
 
         public UnitDecorator(IUnit unit, IBuff buff)
         {
@@ -22,19 +20,34 @@ namespace Core.Entities.Buffs
         {
             get
             {
-                // Получаем все баффы в цепочке
+                // 1. Находим самый внутренний (базовый) юнит, чтобы взять его "чистое" имя без скобок
+                IUnit root = this;
+                while (root is UnitDecorator decorator)
+                {
+                    root = decorator.GetInnerUnit();
+                }
+                string baseName = root.Name;
+
+                // 2. Собираем все баффы в цепочке
                 var allBuffs = GetAllBuffsList();
 
                 if (!allBuffs.Any())
-                    return _unit.Name;
+                    return baseName;
 
-                // Формируем строку: "с Щитом, с Копьем"
+                // 3. Формируем красивый список: "с Бафф1, с Бафф2"
                 string buffsString = string.Join(", ", allBuffs.Select(b => $"с {b.NameInstrumental}"));
-
-                // Если базовый юнит уже имеет имя (например, Heavy 1), добавляем скобки
-                return $"{_unit.Name} ({buffsString})";
+                return $"{baseName} ({buffsString})";
             }
-            set => _unit.Name = value;
+            set
+            {
+                // Пропускаем присваивание до базового юнита, чтобы не ломать цепочку
+                IUnit root = this;
+                while (root is UnitDecorator decorator)
+                {
+                    root = decorator.GetInnerUnit();
+                }
+                root.Name = value;
+            }
         }
 
         public int Attack => _unit.Attack + _buff.AttackBonus;
@@ -57,6 +70,7 @@ namespace Core.Entities.Buffs
             if (new Random().Next(0, 100) < chanceToRemove)
             {
                 _isBroken = true;
+                BrokenBuff = _buff; // Запоминаем, какой именно бафф слетел
             }
         }
 
@@ -107,6 +121,11 @@ namespace Core.Entities.Buffs
                 }
             }
             return types;
+        }
+
+        public override string ToString()
+        {
+            return $"{Name} (HP: {Health}/{MaxHealth}, ATK: {Attack}, DEF: {Defence})";
         }
     }
 }
