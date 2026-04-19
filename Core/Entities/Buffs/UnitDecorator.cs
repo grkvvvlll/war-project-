@@ -62,15 +62,20 @@ namespace Core.Entities.Buffs
 
         public void TakeDamage(int damage)
         {
-            _unit.TakeDamage(damage);
+            // Передаём урон напрямую базовому юниту, минуя промежуточные декораторы
+            IUnit inner = _unit;
+            while (inner is UnitDecorator innerDec)
+                inner = innerDec.GetInnerUnit();
+            inner.TakeDamage(damage);
+
+            if (damage == 0) return;
 
             int chanceToRemove = 20;
             if (damage > 5) chanceToRemove = 50;
-
             if (new Random().Next(0, 100) < chanceToRemove)
             {
                 _isBroken = true;
-                BrokenBuff = _buff; // Запоминаем, какой именно бафф слетел
+                BrokenBuff = _buff;
             }
         }
 

@@ -1,10 +1,9 @@
-﻿using System.Linq;
-using System.Threading;
-using Core.Entities;
+﻿using Core.Entities;
 using Core.Entities.Buffs;
 using Core.Entities.Units;
 using Core.Interfaces;
 using Services.Storage;
+using Core.Formations;
 
 namespace Services.Battle
 {
@@ -18,6 +17,7 @@ namespace Services.Battle
         private readonly SpecialAbilityService _specialAbilityService;
         private readonly IRandomService _random;
         private readonly IBattleLogger _logger;
+        private IBattleFormation _formation;
 
         private int _scoreArmy1 = 0;
         private int _scoreArmy2 = 0;
@@ -36,12 +36,14 @@ namespace Services.Battle
             IMeleeService meleeService,
             SpecialAbilityService specialAbilityService,
             IRandomService random,
-            IBattleLogger logger)
+            IBattleLogger logger,
+            IBattleFormation formation)
         {
             _meleeService = meleeService;
             _specialAbilityService = specialAbilityService;
             _random = random;
             _logger = logger;
+            _formation = formation;
         }
 
         public BattleResult StartBattle(
@@ -89,7 +91,7 @@ namespace Services.Battle
 
             while (HasAlive(army1) && HasAlive(army2))
             {
-                BattleVisualizer.PrintArmyLine(army1, army2);
+                BattleVisualizer.PrintArmyLine(army1, army2, _formation);
                 Console.WriteLine();
 
                 // проверяем, остались ли только Гуляй-города
@@ -127,8 +129,8 @@ namespace Services.Battle
 
                 army1.RemoveDeadUnits();
                 army2.RemoveDeadUnits();
-                CleanBrokenBuffs(army1);
-                CleanBrokenBuffs(army2);
+                RenumberArmy(army1, isArmy1: true);
+                RenumberArmy(army2, isArmy1: false);
                 turns++;
 
                 // проверяем изменения состояния
@@ -220,6 +222,7 @@ namespace Services.Battle
                 Console.WriteLine("2 - сохранить и выйти в меню");
                 Console.WriteLine("3 - проиграть до конца");
                 Console.WriteLine("4 - выйти в меню без сохранения");
+                Console.WriteLine("5 - изменить построение армий");
                 Console.Write("Ваш выбор: ");
                 string input = (Console.ReadLine() ?? "").Trim();
                 if (string.IsNullOrEmpty(input))
@@ -243,6 +246,11 @@ namespace Services.Battle
                 {
                     _exitWithoutSave = true;
                     return false;
+                }
+                if (input == "5")
+                {
+                    ChangeFormation();
+                    continue;
                 }
                 Console.WriteLine("Неизвестная команда.");
             }
@@ -294,19 +302,6 @@ namespace Services.Battle
             Thread.Sleep(30);
         }
 
-        private void CleanBrokenBuffs(IArmy army)
-        {
-            for (int i = 0; i < army.Units.Count; i++)
-            {
-                if (army.Units[i] is UnitDecorator decorator && decorator.IsBroken())
-                {
-                    // Заменяем декоратор на внутренний юнит
-                    ((Army)army).SetUnit(i, decorator.GetInnerUnit());
-                    _logger.LogInfo($"{decorator.GetInnerUnit().Name} потерял экипировку!");
-                }
-            }
-        }
-
         private void CleanAndLogBrokenBuffs(IArmy army, bool isArmy1)
         {
             // Проходим с конца, чтобы безопасно заменять элементы в списке
@@ -318,12 +313,57 @@ namespace Services.Battle
                     string unitName = decorator.GetInnerUnit().Name;       // Имя юнита без этого баффа
 
                     Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-                    Console.Write($"{unitName} ");
+                    Console.Write($"💥{unitName} ");
                     Console.ResetColor();
-                    Console.WriteLine($"потерял {buffName}!");
+                    Console.WriteLine($"потерял бафф {buffName}!");
 
                     // Снимаем декоратор: заменяем его в армии на "голый" юнит внутри
                     ((Army)army).SetUnit(i, decorator.GetInnerUnit());
+                }
+            }
+        }
+
+        public void SetFormation(IBattleFormation formation)
+        {
+            _formation = formation;
+            if (_meleeService is MeleeService ms) ms.SetFormation(formation);
+            _specialAbilityService.SetFormation(formation);
+        }
+
+        private void ChangeFormation()
+        {
+            Console.WriteLine("Выберите построение:");
+            Console.WriteLine("1. Бой на мосту");
+            Console.WriteLine("2. Бой на широком мосту");
+            Console.Write("Ваш выбор: ");
+            var input = Console.ReadLine()?.Trim();
+            if (input == "1") SetFormation(new BridgeFormation());
+            else if (input == "2") SetFormation(new WideBridgeFormation());
+            else Console.WriteLine("Неверный ввод.");
+        }
+
+        private void RenumberArmy(IArmy army, bool isArmy1)
+        {
+            var alive = army.Units.Where(u => u.IsAlive).ToList();
+
+            if (isArmy1)
+            {
+                // Армия 1: фронт справа, нумерация от фронта
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    var unit = alive[alive.Count - 1 - i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
+                }
+            }
+            else
+            {
+                // Армия 2: фронт слева, нумерация от фронта
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    var unit = alive[i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
                 }
             }
         }

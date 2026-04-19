@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using Core.Entities.Units;
+﻿using Core.Entities.Units;
 using Core.Interfaces;
 
 namespace Services.Battle
@@ -8,55 +7,51 @@ namespace Services.Battle
     {
         private readonly IDamageCalculator _damageCalculator;
         private readonly IBattleLogger _logger;
+        private IBattleFormation _formation;
 
         public MeleeService(
             IDamageCalculator damageCalculator,
-            IBattleLogger logger)
+            IBattleLogger logger,
+            IBattleFormation formation)
         {
             _damageCalculator = damageCalculator;
             _logger = logger;
+            _formation = formation;
         }
+
+        public void SetFormation(IBattleFormation formation) => _formation = formation;
 
         public int Execute(
             IArmy attackerArmy,
             IArmy defenderArmy,
             bool attackerIsArmy1)
         {
-            var attacker = attackerIsArmy1
-                ? attackerArmy.Units.LastOrDefault(u => u.IsAlive)
-                : attackerArmy.Units.FirstOrDefault(u => u.IsAlive);
+            int totalScore = 0;
 
-            var defender = attackerIsArmy1
-                ? defenderArmy.Units.FirstOrDefault(u => u.IsAlive)
-                : defenderArmy.Units.LastOrDefault(u => u.IsAlive);
+            var pairs = _formation.GetMeleePairs(attackerArmy, defenderArmy, attackerIsArmy1);
 
-            if (attacker == null || defender == null)
-                return 0;
-            // не может атаковать
-            if (attacker is GulyayGorodAdapter)
-                return 0;
-
-            int damage =
-                _damageCalculator.CalculateDamage(attacker, defender);
-
-            int oldHp = defender.Health;
-
-            defender.TakeDamage(damage);
-
-            _logger.LogHit(
-                attacker,
-                defender,
-                damage,
-                oldHp,
-                attackerIsArmy1);
-
-            if (!defender.IsAlive)
+            foreach (var (aIdx, dIdx) in pairs)
             {
-                _logger.LogDeath(defender, !attackerIsArmy1);
-                return defender.Cost;   
+                var attacker = attackerArmy.Units[aIdx];
+                var defender = defenderArmy.Units[dIdx];
+
+                if (!attacker.IsAlive || !defender.IsAlive) continue;
+                if (attacker is GulyayGorodAdapter) continue;
+
+                int damage = _damageCalculator.CalculateDamage(attacker, defender);
+                int oldHp = defender.Health;
+                defender.TakeDamage(damage);
+
+                _logger.LogHit(attacker, defender, damage, oldHp, attackerIsArmy1);
+
+                if (!defender.IsAlive)
+                {
+                    _logger.LogDeath(defender, !attackerIsArmy1);
+                    totalScore += defender.Cost;
+                }
             }
 
-            return 0;
+            return totalScore;
         }
     }
 }

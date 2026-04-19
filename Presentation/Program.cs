@@ -1,7 +1,8 @@
-﻿using Services.Battle;
-using Services.Random;
-using Services.Logging;
+﻿using Core.Formations;
 using Core.Interfaces;
+using Services.Battle;
+using Services.Logging;
+using Services.Random;
 
 namespace Presentation
 {
@@ -14,16 +15,19 @@ namespace Presentation
             IRandomService randomService = new RandomService();
             IBattleLogger logger = new RecordingBattleLogger(new ConsoleBattleLogger());
             IDamageCalculator damageCalculator = new DamageCalculator();
-            IMeleeService meleeService = new MeleeService(damageCalculator, logger);
 
-            // Передаём IRandomService в SpecialAbilityService
-            SpecialAbilityService specialAbilityService = new SpecialAbilityService(logger);
+            // Построение по умолчанию — бой на мосту
+            IBattleFormation formation = new BridgeFormation();
+
+            IMeleeService meleeService = new MeleeService(damageCalculator, logger, formation);
+            SpecialAbilityService specialAbilityService = new SpecialAbilityService(logger, formation);
 
             IBattleField battleField = new BattleField(
                 meleeService,
                 specialAbilityService,
                 randomService,
-                logger);
+                logger,
+                formation);
 
             var menu = new ConsoleMenu(randomService, logger, damageCalculator, battleField);
             menu.Run();

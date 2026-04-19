@@ -8,6 +8,7 @@ using Services.Battle;
 using Services.Logging;
 using Services.Random;
 using Services.Storage;
+using Core.Formations;
 
 namespace Presentation
 {
@@ -54,7 +55,6 @@ namespace Presentation
             while (true)
             {
                 Console.Clear();
-                Console.WriteLine("=== Army Game ===");
                 Console.WriteLine("1. Новая игра");
                 Console.WriteLine("2. Помощь");
                 Console.WriteLine("3. Загрузить игру");
@@ -90,14 +90,33 @@ namespace Presentation
 
             Console.Write("Введите бюджет для армий: ");
             int budget = ReadInt();
+            Console.WriteLine();
+
+            Console.WriteLine("Выберите способ построения:");
+            IBattleFormation formation;
+            while (true)
+            {
+                Console.WriteLine("1. Бой на мосту");
+                Console.WriteLine("2. Бой на широком мосту");
+                Console.Write("Выберите построение (1-2): ");
+                var input = Console.ReadLine()?.Trim();
+                if (input == "1") { formation = new BridgeFormation(); break; }
+                else if (input == "2") { formation = new WideBridgeFormation(); break; }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
+                    Console.ResetColor();
+                    Console.WriteLine();
+                }
+            }
+            if (_battleField is BattleField bf) bf.SetFormation(formation);
 
             // === 2. АРМИЯ 1 ===
-            Console.WriteLine("\n=== АРМИЯ 1 ===");
             var army1 = CreateArmyWithChoice("Армия 1", budget);
             RenumberUnitsFromFront(army1, isArmy1: true);
 
             // === 3. АРМИЯ 2 ===
-            Console.WriteLine("\n=== АРМИЯ 2 ===");
             var army2 = CreateArmyWithChoice("Армия 2", budget);
             RenumberUnitsFromFront(army2, isArmy1: false);
 
