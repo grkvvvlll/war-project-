@@ -105,8 +105,6 @@ namespace Services.Battle
                     _scoreArmy1 += _meleeService.Execute(army1, army2, true);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _meleeService.Execute(army2, army1, false);
-                    CleanAndLogBrokenBuffs(army1, true);
-                    CleanAndLogBrokenBuffs(army2, false);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _specialAbilityService.Execute(army1, army2, true);
                     if (HasAlive(army1) && HasAlive(army2))
@@ -117,8 +115,6 @@ namespace Services.Battle
                     _scoreArmy2 += _meleeService.Execute(army2, army1, false);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy1 += _meleeService.Execute(army1, army2, true);
-                    CleanAndLogBrokenBuffs(army2, false);
-                    CleanAndLogBrokenBuffs(army1, true);
                     if (HasAlive(army1) && HasAlive(army2))
                         _scoreArmy2 += _specialAbilityService.Execute(army2, army1, false);
                     if (HasAlive(army1) && HasAlive(army2))
@@ -249,7 +245,7 @@ namespace Services.Battle
                 }
                 if (input == "5")
                 {
-                    ChangeFormation();
+                    ChangeFormation(army1, army2);
                     continue;
                 }
                 Console.WriteLine("Неизвестная команда.");
@@ -330,25 +326,39 @@ namespace Services.Battle
             _specialAbilityService.SetFormation(formation);
         }
 
-        private void ChangeFormation()
+        private void ChangeFormation(IArmy army1, IArmy army2)
         {
             Console.WriteLine("Выберите построение:");
             Console.WriteLine("1. Бой на мосту");
             Console.WriteLine("2. Бой на широком мосту");
+            Console.WriteLine("3. Стенка на стенку");
             Console.Write("Ваш выбор: ");
             var input = Console.ReadLine()?.Trim();
+
+            var previousFormation = _formation;
+
             if (input == "1") SetFormation(new BridgeFormation());
             else if (input == "2") SetFormation(new WideBridgeFormation());
-            else Console.WriteLine("Неверный ввод.");
+            else if (input == "3") SetFormation(new WallFormation());
+            else { Console.WriteLine("Неверный ввод."); return; }
+
+            // Если переключаемся между стенкой и мостом — разворачиваем армию 1
+            bool wasWall = previousFormation is WallFormation;
+            bool isWall = _formation is WallFormation;
+            if (wasWall != isWall)
+                ((Army)army1).ReverseUnits();
+
+            RenumberArmy(army1, isArmy1: true);
+            RenumberArmy(army2, isArmy1: false);
         }
 
         private void RenumberArmy(IArmy army, bool isArmy1)
         {
             var alive = army.Units.Where(u => u.IsAlive).ToList();
+            bool isWall = _formation is WallFormation;
 
-            if (isArmy1)
+            if (isArmy1 && !isWall)
             {
-                // Армия 1: фронт справа, нумерация от фронта
                 for (int i = 0; i < alive.Count; i++)
                 {
                     var unit = alive[alive.Count - 1 - i];
@@ -358,7 +368,6 @@ namespace Services.Battle
             }
             else
             {
-                // Армия 2: фронт слева, нумерация от фронта
                 for (int i = 0; i < alive.Count; i++)
                 {
                     var unit = alive[i];
@@ -367,5 +376,7 @@ namespace Services.Battle
                 }
             }
         }
+
+        public IBattleFormation GetFormation() => _formation;
     }
 }

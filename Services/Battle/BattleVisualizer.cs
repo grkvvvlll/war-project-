@@ -9,13 +9,11 @@ namespace Services.Battle
         public static void PrintArmyLine(IArmy army1, IArmy army2, IBattleFormation formation)
         {
             if (formation is WideBridgeFormation wideBridge)
-            {
                 PrintWideBridge(army1, army2, wideBridge);
-            }
+            else if (formation is WallFormation wall)
+                PrintWall(army1, army2, wall);
             else
-            {
                 PrintBridge(army1, army2);
-            }
         }
 
         // ── Старое построение: одна строка ────────────────────────────────────
@@ -58,7 +56,7 @@ namespace Services.Battle
         private static void PrintWideBridge(IArmy army1, IArmy army2, WideBridgeFormation formation)
         {
             // Получаем карты позиций: unitIndex → (row, col)
-            var map1 = formation.GetAlivePositionMap(army1, isArmy1: true);
+            var map1 = formation.GetAlivePositionMap(army1);
             var map2 = formation.GetAlivePositionMap(army2, isArmy1: false);
 
             // Считаем количество столбцов в каждой армии
@@ -102,6 +100,46 @@ namespace Services.Battle
             }
 
             Console.WriteLine(); // отступ после сетки
+        }
+
+        // ── Стенка на стенку: строки, каждая строка = пара юнитов ───────────────
+        private static void PrintWall(IArmy army1, IArmy army2, WallFormation formation)
+        {
+            var map1 = formation.GetAlivePositionMap(army1);
+            var map2 = formation.GetAlivePositionMap(army2);
+
+            // Количество строк = максимум живых в любой из армий
+            int rows = Math.Max(
+                map1.Any() ? map1.Values.Max(p => p.row) + 1 : 0,
+                map2.Any() ? map2.Values.Max(p => p.row) + 1 : 0);
+
+            var grid1 = map1.ToDictionary(kv => kv.Value.row, kv => kv.Key);
+            var grid2 = map2.ToDictionary(kv => kv.Value.row, kv => kv.Key);
+
+            for (int row = 0; row < rows; row++)
+            {
+                // Армия 1
+                Console.ForegroundColor = ConsoleColor.White;
+                if (grid1.TryGetValue(row, out int idx1))
+                    Console.Write(GetIcon(army1.Units[idx1]) + " ");
+                else
+                    Console.Write("   ");
+                Console.ResetColor();
+
+                Console.Write("     "); // зазор
+
+                // Армия 2
+                Console.ForegroundColor = ConsoleColor.Red;
+                if (grid2.TryGetValue(row, out int idx2))
+                    Console.Write(GetIcon(army2.Units[idx2]) + " ");
+                else
+                    Console.Write("   ");
+                Console.ResetColor();
+
+                Console.WriteLine();
+            }
+
+            Console.WriteLine();
         }
 
         private static string GetIcon(IUnit unit)

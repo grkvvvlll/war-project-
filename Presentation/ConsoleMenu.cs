@@ -3,12 +3,13 @@ using Core.Entities.Units;
 using Core.Factories;
 using Core.Factories.Armies;
 using Core.Factories.Units;
+using Core.Formations;
 using Core.Interfaces;
+using Microsoft.VisualBasic;
 using Services.Battle;
 using Services.Logging;
 using Services.Random;
 using Services.Storage;
-using Core.Formations;
 
 namespace Presentation
 {
@@ -98,14 +99,16 @@ namespace Presentation
             {
                 Console.WriteLine("1. Бой на мосту");
                 Console.WriteLine("2. Бой на широком мосту");
-                Console.Write("Выберите построение (1-2): ");
+                Console.WriteLine("3. Стенка на стенку");
+                Console.Write("Выберите построение (1-3): ");
                 var input = Console.ReadLine()?.Trim();
                 if (input == "1") { formation = new BridgeFormation(); break; }
                 else if (input == "2") { formation = new WideBridgeFormation(); break; }
+                else if (input == "3") { formation = new WallFormation(); break; }
                 else
                 {
                     Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
+                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1, 2 или 3.");
                     Console.ResetColor();
                     Console.WriteLine();
                 }
@@ -481,26 +484,25 @@ namespace Presentation
         {
             var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
 
-            if (isArmy1)
+            // Для стенки — всегда сверху вниз для обеих армий
+            bool wallFormation = _battleField is BattleField bf && bf.GetFormation() is WallFormation;
+
+            if (isArmy1 && !wallFormation)
             {
-                // Армия 1 (левая): фронт СПРАВА, нумерация СПРАВА НАЛЕВО
-                // Юнит справа (индекс Count-1) получает номер 1
                 for (int i = 0; i < aliveUnits.Count; i++)
                 {
                     var unit = aliveUnits[aliveUnits.Count - 1 - i];
                     var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}"; // Прямое присваивание
+                    unit.Name = $"{unitType} {i + 1}";
                 }
             }
             else
             {
-                // Армия 2 (правая): фронт СЛЕВА, нумерация СЛЕВА НАПРАВО
-                // Юнит слева (индекс 0) получает номер 1
                 for (int i = 0; i < aliveUnits.Count; i++)
                 {
                     var unit = aliveUnits[i];
                     var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}"; // Прямое присваивание
+                    unit.Name = $"{unitType} {i + 1}";
                 }
             }
         }

@@ -1,4 +1,6 @@
-﻿using Core.Entities.Units;
+﻿using Core.Entities;
+using Core.Entities.Buffs;
+using Core.Entities.Units;
 using Core.Interfaces;
 
 namespace Services.Battle
@@ -40,9 +42,22 @@ namespace Services.Battle
 
                 int damage = _damageCalculator.CalculateDamage(attacker, defender);
                 int oldHp = defender.Health;
+
                 defender.TakeDamage(damage);
 
                 _logger.LogHit(attacker, defender, damage, oldHp, attackerIsArmy1);
+
+                // Сразу показываем потерю баффа если слетел
+                if (defender is UnitDecorator dec && dec.BrokenBuff != null)
+                {
+                    string unitName = dec.GetInnerUnit().Name;
+                    string buffName = dec.BrokenBuff.NameNominative;
+                    Console.ForegroundColor = attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
+                    Console.Write($"{unitName} ");
+                    Console.ResetColor();
+                    Console.WriteLine($"💥 потерял бафф {buffName}!");
+                    ((Army)defenderArmy).SetUnit(dIdx, dec.GetInnerUnit());
+                }
 
                 if (!defender.IsAlive)
                 {

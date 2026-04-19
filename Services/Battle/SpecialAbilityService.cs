@@ -101,9 +101,7 @@ namespace Services.Battle
                     int healed = target.Health - oldHp;
                     if (healed > 0)
                     {
-                        Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-                        Console.Write($"💚 ");
-                        Console.ResetColor();
+                        Console.Write("💚 ");
                         _logger.LogHeal(unit, target, healed, isArmy1);
                     }
                     else
@@ -137,6 +135,10 @@ namespace Services.Battle
                 if (!enMap.TryGetValue(enemyIndex, out var enPos)) return 999;
                 return myPos.col + enPos.col + 2;
             }
+
+            if (_formation is WallFormation wall)
+                return wall.GetDistanceBetweenUnits(myArmy, myIndex, enemyArmy, enemyIndex, isArmy1);
+
             // BridgeFormation — старая логика
             int myFront = GetBridgeFrontIndex(myArmy, isArmy1);
             int enFront = GetBridgeFrontIndex(enemyArmy, !isArmy1);
@@ -150,12 +152,15 @@ namespace Services.Battle
         {
             if (_formation is WideBridgeFormation wideBridge)
             {
-                // Чебышёв по (row, col)
                 var map = wideBridge.GetAlivePositionMap(army, isArmy1);
                 if (!map.TryGetValue(index1, out var p1)) return 999;
                 if (!map.TryGetValue(index2, out var p2)) return 999;
                 return Math.Max(Math.Abs(p1.row - p2.row), Math.Abs(p1.col - p2.col));
             }
+
+            if (_formation is WallFormation wall)
+                return wall.GetDistanceBetweenAllies(army, index1, index2, isArmy1);
+
             // BridgeFormation — старая линейная логика
             int front = GetBridgeFrontIndex(army, isArmy1);
             int d1 = CountBridgeAliveBetween(army, index1, front, isArmy1);
@@ -168,13 +173,11 @@ namespace Services.Battle
         {
             if (unit.SpecialAbility is not SquireAbility squireAbility) return;
 
-            // Для обычного моста — только соседи по индексу (i-1, i+1)
-            // Для широкого — чебышёв = 1 (все 8 направлений)
             List<int> neighborIndices;
             if (_formation is WideBridgeFormation)
-            {
                 neighborIndices = GetNeighborIndicesWide(army, i, isArmy1, maxDist: 1);
-            }
+            else if (_formation is WallFormation wall)
+                neighborIndices = GetNeighborIndicesByRow(army, i, maxDist: 1, wall);
             else
             {
                 neighborIndices = new List<int>();
@@ -331,7 +334,6 @@ namespace Services.Battle
 
                     foreach (var (enIdx, enPos) in enMap)
                     {
-                        // дистанция: мои столбцы до фронта + зазор + столбцы врага до цели + 1
                         int dist = myPos.col + enPos.col + 2;
                         if (dist <= archer.Range)
                             validTargets.Add((enemy.Units[enIdx], dist));
@@ -340,10 +342,31 @@ namespace Services.Battle
                     if (validTargets.Any())
                         return validTargets[_random.Next(validTargets.Count)].unit;
 
-                    // не долетает — возвращаем ближайшего (для лога)
                     return enMap
                         .OrderBy(kv => kv.Value.col)
                         .Select(kv => enemy.Units[kv.Key])
+                        .FirstOrDefault();
+                }
+                else if (_formation is WallFormation wall)
+                {
+                    // Стенка: стреляет вверх/вниз по столбцу врага
+                    for (int j = 0; j < enemy.Units.Count; j++)
+                    {
+                        if (!enemy.Units[j].IsAlive) continue;
+                        int dist = wall.GetDistanceBetweenUnits(army, unitIndex, enemy, j, isArmy1);
+                        if (dist <= archer.Range)
+                            validTargets.Add((enemy.Units[j], dist));
+                    }
+
+                    if (validTargets.Any())
+                        return validTargets[_random.Next(validTargets.Count)].unit;
+
+                    return enemy.Units
+                        .Where(u => u.IsAlive)
+                        .OrderBy(u => {
+                            int j = enemy.Units.ToList().IndexOf(u);
+                            return wall.GetDistanceBetweenUnits(army, unitIndex, enemy, j, isArmy1);
+                        })
                         .FirstOrDefault();
                 }
                 else
@@ -388,8 +411,21 @@ namespace Services.Battle
                         if (ally is HeavyUnit) continue;
                         if (!map.TryGetValue(j, out var allyPos)) continue;
 
-                        // Чебышёв для целителя
                         int dist = Math.Max(Math.Abs(myPos.row - allyPos.row), Math.Abs(myPos.col - allyPos.col));
+                        if (dist <= healer.HealRange)
+                            validTargets.Add(ally);
+                    }
+                }
+                else if (_formation is WallFormation wall)
+                {
+                    // Стенка: лечит вверх/вниз по своему столбцу
+                    for (int j = 0; j < army.Units.Count; j++)
+                    {
+                        var ally = army.Units[j];
+                        if (!ally.IsAlive || ally == user) continue;
+                        if (ally is HeavyUnit) continue;
+
+                        int dist = wall.GetDistanceBetweenAllies(army, unitIndex, j, isArmy1);
                         if (dist <= healer.HealRange)
                             validTargets.Add(ally);
                     }
@@ -433,6 +469,24 @@ namespace Services.Battle
                 if (j == unitIndex || !army.Units[j].IsAlive) continue;
                 if (!map.TryGetValue(j, out var pos)) continue;
                 int dist = Math.Max(Math.Abs(myPos.row - pos.row), Math.Abs(myPos.col - pos.col));
+                if (dist <= maxDist)
+                    result.Add(j);
+            }
+            return result;
+        }
+
+        // ── Соседние индексы для стенки (только по строкам ≤ maxDist) ────────
+        private List<int> GetNeighborIndicesByRow(IArmy army, int unitIndex, int maxDist, WallFormation wall)
+        {
+            var result = new List<int>();
+            var map = wall.GetAlivePositionMap(army);
+            if (!map.TryGetValue(unitIndex, out var myPos)) return result;
+
+            for (int j = 0; j < army.Units.Count; j++)
+            {
+                if (j == unitIndex || !army.Units[j].IsAlive) continue;
+                if (!map.TryGetValue(j, out var pos)) continue;
+                int dist = Math.Abs(myPos.row - pos.row);
                 if (dist <= maxDist)
                     result.Add(j);
             }

@@ -79,5 +79,10 @@ namespace Core.Entities
                 _units[index] = unit;
             }
         }
+
+        public void ReverseUnits()
+        {
+            _units.Reverse();
+        }
     }
 }
