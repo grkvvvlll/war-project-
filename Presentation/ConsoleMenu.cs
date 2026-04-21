@@ -10,6 +10,7 @@ using Services.Battle;
 using Services.Logging;
 using Services.Random;
 using Services.Storage;
+using Services.Observers;
 
 namespace Presentation
 {
@@ -59,6 +60,7 @@ namespace Presentation
                 Console.WriteLine("1. Новая игра");
                 Console.WriteLine("2. Помощь");
                 Console.WriteLine("3. Загрузить игру");
+                Console.WriteLine("4. Настройки наблюдателей");
                 Console.WriteLine("0. Выход");
                 Console.Write("Выберите пункт: ");
 
@@ -73,6 +75,9 @@ namespace Presentation
                     case "3":
                         LoadGame();
                         break;
+                    case "4":
+                        ShowObserverSettings();
+                        break;
                     case "0":
                         return;
                     default:
@@ -82,9 +87,50 @@ namespace Presentation
                 }
             }
         }
+        private void ShowObserverSettings()
+        {
+            while (true)
+            {
+                Console.Clear();
+                Console.WriteLine("=== Настройки наблюдателей ===");
+                Console.WriteLine($"1. Событие смерти: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine($"2. Лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine("0. Назад");
+                Console.Write("Выберите пункт: ");
 
+                switch ((Console.ReadLine() ?? "").Trim())
+                {
+                    case "1":
+                        ObserverRegistry.DeathObserver.IsEnabled = !ObserverRegistry.DeathObserver.IsEnabled;
+                        break;
+                    case "2":
+                        ObserverRegistry.HealthObserver.IsEnabled = !ObserverRegistry.HealthObserver.IsEnabled;
+                        break;
+                    case "0":
+                        return;
+                    default:
+                        Console.WriteLine("Неверный выбор.");
+                        Console.ReadLine();
+                        break;
+                }
+            }
+        }
+        private void ClearLogFile()
+        {
+            string logPath = Path.Combine(
+                AppContext.BaseDirectory,
+                "logs",
+                "damage-log.txt");
+
+            if (File.Exists(logPath))
+            {
+                File.WriteAllText(logPath, string.Empty);
+            }
+        }
+        
         private void StartNewGame()
         {
+            ClearLogFile();
             Console.Clear();
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
@@ -122,6 +168,8 @@ namespace Presentation
             // === 3. АРМИЯ 2 ===
             var army2 = CreateArmyWithChoice("Армия 2", budget);
             RenumberUnitsFromFront(army2, isArmy1: false);
+            ObserverRegistry.Attach(army1);
+            ObserverRegistry.Attach(army2);
 
             Console.Clear();
             Console.WriteLine("Армии сформированы:");
@@ -438,6 +486,12 @@ namespace Presentation
             }
 
             var restored = saveService.RestoreBattle(save, _random);
+            
+            if (_battleField is BattleField bf)
+                bf.SetFormation(restored.Formation);
+
+            ObserverRegistry.Attach(restored.Army1);
+            ObserverRegistry.Attach(restored.Army2);
 
             Console.WriteLine("Бой восстановлен.");
             Console.WriteLine($"Следующий раунд: {restored.Turns + 1}");

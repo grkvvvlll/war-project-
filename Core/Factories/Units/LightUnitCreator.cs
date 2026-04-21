@@ -1,6 +1,5 @@
 ﻿using Core.Interfaces;
 using Core.Entities.Units;
-using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -25,7 +24,7 @@ namespace Core.Factories.Units
                 UnitFactory.LightHP,
                 UnitFactory.LightCost,
                 _random); // Передаем random
-            return new LightUnitProxy(unit, _random);
+            return unit;
         }
     }
 }

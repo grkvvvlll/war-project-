@@ -11,6 +11,7 @@ namespace Services.Storage
         public bool Army1Turn { get; set; }
         public int ScoreArmy1 { get; set; }
         public int ScoreArmy2 { get; set; }
+        public IBattleFormation Formation { get; set; } = null!;
 
         public bool IsFinished { get; set; }
         public string Winner { get; set; } = "";

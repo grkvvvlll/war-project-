@@ -14,6 +14,19 @@ namespace Core.Entities.Units
         public virtual bool IsAlive => Health > 0;
         public ISpecialAbility? SpecialAbility { get; protected set; }
 
+        public event Action<IUnit, int, int>? HealthChanged;
+        public event Action<IUnit>? Died;
+
+        protected virtual void OnHealthChanged(int oldHp, int newHp)
+        {
+            if (oldHp != newHp)
+                HealthChanged?.Invoke(this, oldHp, newHp);
+        }
+
+        protected virtual void OnDied()
+        {
+            Died?.Invoke(this);
+        }
         protected Unit(
             string name,
             int attack,
@@ -54,9 +67,17 @@ namespace Core.Entities.Units
             if (damage < 0)
                 throw new ArgumentException("Damage cannot be negative.");
 
+            int oldHp = Health;
+            bool wasAlive = IsAlive;
+
             Health -= damage;
             if (Health < 0)
                 Health = 0;
+
+            OnHealthChanged(oldHp, Health);
+
+            if (wasAlive && !IsAlive)
+                OnDied();
         }
 
         public virtual void Heal(int amount)
@@ -64,9 +85,13 @@ namespace Core.Entities.Units
             if (amount < 0)
                 throw new ArgumentException("Heal amount cannot be negative.");
 
+            int oldHp = Health;
+
             Health += amount;
             if (Health > MaxHealth)
                 Health = MaxHealth;
+
+            OnHealthChanged(oldHp, Health);
         }
 
         public override string ToString()

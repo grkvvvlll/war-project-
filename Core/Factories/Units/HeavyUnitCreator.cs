@@ -1,6 +1,5 @@
 ﻿using Core.Interfaces;
 using Core.Entities.Units;
-using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -18,7 +17,7 @@ namespace Core.Factories.Units
                 UnitFactory.HeavyHP,
                 UnitFactory.HeavyCost);
 
-            return new HeavyUnitProxy(unit);
+            return unit;
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using Core.Entities.Units;
 using Core.Interfaces;
-using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -28,7 +27,7 @@ namespace Core.Factories.Units
                 UnitFactory.WizardCloneChance,
                 _random);
 
-            return new WizardProxy(unit, _random);
+            return unit;
         }
     }
 }

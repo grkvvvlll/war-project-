@@ -59,6 +59,17 @@ namespace Core.Entities.Buffs
         public bool IsAlive => _unit.IsAlive;
 
         public ISpecialAbility? SpecialAbility => _unit.SpecialAbility;
+        public event Action<IUnit, int, int>? HealthChanged
+        {
+            add { _unit.HealthChanged += value; }
+            remove { _unit.HealthChanged -= value; }
+        }
+
+        public event Action<IUnit>? Died
+        {
+            add { _unit.Died += value; }
+            remove { _unit.Died -= value; }
+        }
 
         public void TakeDamage(int damage)
         {

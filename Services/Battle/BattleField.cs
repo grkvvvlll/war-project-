@@ -268,6 +268,7 @@ namespace Services.Battle
                 army1Turn,
                 _scoreArmy1,
                 _scoreArmy2,
+                _formation,
                 rec.Lines,
                 saveName);
             string fileName = BattleSaveService.Instance.Save(save, saveName);

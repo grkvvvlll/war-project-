@@ -1,6 +1,5 @@
 ﻿using Core.Interfaces;
 using Core.Entities.Units;
-using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -19,7 +18,7 @@ namespace Core.Factories.Units
                 UnitFactory.ArcherCost,
                 UnitFactory.ArcherRange);
 
-            return new ArcherProxy(unit);
+            return unit;
         }
     }
 }

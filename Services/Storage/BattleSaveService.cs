@@ -6,8 +6,8 @@ using System.Text;
 using System.Text.Json;
 using Core.Entities;
 using Core.Entities.Units;
-using Core.Entities.Units.Proxies;
 using Core.Interfaces;
+using Core.Formations;
 
 namespace Services.Storage
 {
@@ -124,6 +124,7 @@ namespace Services.Storage
             bool army1Turn,
             int scoreArmy1,
             int scoreArmy2,
+            IBattleFormation formation,
             IEnumerable<string> logLines,
             string? displayName = null)
         {
@@ -135,6 +136,7 @@ namespace Services.Storage
                 Army1Turn = army1Turn,
                 ScoreArmy1 = scoreArmy1,
                 ScoreArmy2 = scoreArmy2,
+                FormationType = GetFormationType(formation),
                 Army1 = MapArmy(army1),
                 Army2 = MapArmy(army2),
                 IsFinished = false,
@@ -153,6 +155,7 @@ namespace Services.Storage
                     Army1Turn = save.Army1Turn,
                     ScoreArmy1 = save.ScoreArmy1,
                     ScoreArmy2 = save.ScoreArmy2,
+                    Formation = CreateFormation(save.FormationType),
                     IsFinished = true,
                     Winner = save.Winner
                 };
@@ -166,6 +169,7 @@ namespace Services.Storage
                 Army1Turn = save.Army1Turn,
                 ScoreArmy1 = save.ScoreArmy1,
                 ScoreArmy2 = save.ScoreArmy2,
+                Formation = CreateFormation(save.FormationType),
                 IsFinished = false,
                 Winner = save.Winner
             };
@@ -236,28 +240,37 @@ namespace Services.Storage
         {
             return dto.UnitType switch
             {
-                "Heavy" => new HeavyUnitProxy(
-                    new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost)),
+                "Heavy" => new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
 
-                "Light" => new LightUnitProxy(
-                    new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, random), random),
+                "Light" => new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, random),
 
-                "Archer" => new ArcherProxy(
-                    new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0)),
+                "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
 
-                "Healer" => new HealerProxy(
-                    new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0)),
+                "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0),
 
-                "Wizard" => new WizardProxy(
-                    new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
-                    random),
+                "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
 
                 "GulyayGorod" => CreateGulyayGorod(dto),
 
                 _ => throw new InvalidDataException($"Неизвестный тип юнита: {dto.UnitType}")
             };
         }
+        private string GetFormationType(IBattleFormation formation)
+        {
+            if (formation is WideBridgeFormation) return "WideBridge";
+            if (formation is WallFormation) return "Wall";
+            return "Bridge";
+        }
 
+        private IBattleFormation CreateFormation(string? formationType)
+        {
+            return formationType switch
+            {
+                "WideBridge" => new WideBridgeFormation(),
+                "Wall" => new WallFormation(),
+                _ => new BridgeFormation()
+            };
+        }
         private string SanitizeFileName(string name)
         {
             var invalid = Path.GetInvalidFileNameChars();
@@ -283,7 +296,7 @@ namespace Services.Storage
                 dto.Cost,
                 original);
 
-            return new GulyayGorodAdapterProxy(unit);
+            return unit;
         }
     }
 }

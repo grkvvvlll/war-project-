@@ -4,6 +4,7 @@ using Core.Entities.Units;
 using Core.Interfaces;
 using Core.Entities;
 using Core.Formations;
+using Services.Observers;
 
 namespace Services.Battle
 {
@@ -298,6 +299,7 @@ namespace Services.Battle
                     insertPosition = isArmy1 ? i + 1 : i;
 
                 army.InsertUnit(clone, insertPosition);
+                ObserverRegistry.Attach(clone);
                 processedUnits.Add(clone);
                 Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
                 Console.Write($"✨ {user.Name} ");

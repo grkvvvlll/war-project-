@@ -1,6 +1,5 @@
 ﻿using Core.Entities.Units;
 using Core.Interfaces;
-using Core.Entities.Units.Proxies;
 
 namespace Core.Factories.Units
 {
@@ -20,7 +19,7 @@ namespace Core.Factories.Units
                 UnitFactory.HealerRange,
                 UnitFactory.HealerPower);
 
-            return new HealerProxy(unit);
+            return unit;
         }
     }
 }
