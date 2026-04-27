@@ -6,6 +6,7 @@ using Core.Factories.Units;
 using Core.Formations;
 using Core.Interfaces;
 using Microsoft.VisualBasic;
+using System.Runtime.InteropServices;
 using Services.Battle;
 using Services.Logging;
 using Services.Random;
@@ -16,6 +17,12 @@ namespace Presentation
 {
     public class ConsoleMenu
     {
+        private const int StdOutputHandle = -11;
+        private const int EnableVirtualTerminalProcessing = 0x0004;
+
+        private static bool _virtualTerminalModeChecked;
+        private static bool _alternateScreenEnabled;
+
         private readonly IRandomService _random;
         private readonly IBattleLogger _logger;
         private readonly IDamageCalculator _damageCalculator;
@@ -56,7 +63,7 @@ namespace Presentation
         {
             while (true)
             {
-                Console.Clear();
+                ClearConsole();
                 Console.WriteLine("1. Новая игра");
                 Console.WriteLine("2. Помощь");
                 Console.WriteLine("3. Загрузить игру");
@@ -91,10 +98,15 @@ namespace Presentation
         {
             while (true)
             {
-                Console.Clear();
+                ClearConsole();
                 Console.WriteLine("=== Настройки наблюдателей ===");
-                Console.WriteLine($"1. Событие смерти: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
-                Console.WriteLine($"2. Лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine($"1. Звук при смерти юнита: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine($"2. Файловый лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine();
+                Console.WriteLine("Наблюдатель 2 пишет только в logs/damage-log.txt.");
+                Console.WriteLine("Если он выключен, изменения HP в файл не добавляются.");
+                Console.WriteLine("Смерти [BEEP] пишет наблюдатель 1, если он включён.");
+                Console.WriteLine("Боевые сообщения в консоли выводит обычный логгер боя.");
                 Console.WriteLine("0. Назад");
                 Console.Write("Выберите пункт: ");
 
@@ -131,7 +143,7 @@ namespace Presentation
         private void StartNewGame()
         {
             ClearLogFile();
-            Console.Clear();
+            ClearConsole();
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
 
@@ -171,45 +183,53 @@ namespace Presentation
             ObserverRegistry.Attach(army1);
             ObserverRegistry.Attach(army2);
 
-            Console.Clear();
-            Console.WriteLine("Армии сформированы:");
-            Console.WriteLine();
-            PrintArmyComposition(army1);
-            Console.WriteLine();
-            PrintArmyComposition(army2);
-            Console.WriteLine();
-            Console.WriteLine("Нажмите Enter для начала боя...");
-            Console.ReadLine();
-
-            var result = _battleField.StartBattle(army1, army2, autoMode: false);
-
-            if (result.Winner == BattleField.DrawResult)
+            try
             {
-                Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
+                ClearConsole();
+                Console.WriteLine("Армии сформированы:");
+                Console.WriteLine();
+                PrintArmyComposition(army1);
+                Console.WriteLine();
+                PrintArmyComposition(army2);
+                Console.WriteLine();
+                Console.WriteLine("Нажмите Enter для начала боя...");
+                Console.ReadLine();
+
+                ClearBattleConsole();
+
+                var result = _battleField.StartBattle(army1, army2, autoMode: false);
+
+                if (result.Winner == BattleField.DrawResult)
+                {
+                    Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
+                    AskToSaveBattle(result);
+                    return;
+                }
+
+                if (result.Winner == BattleField.SavedAndStoppedResult)
+                {
+                    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
+                if (result.Winner == BattleField.StoppedWithoutSaveResult)
+                {
+                    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
+
+                Console.WriteLine($"\nПобедитель: {result.Winner}");
+                Console.WriteLine($"Ходов: {result.Turns}");
                 AskToSaveBattle(result);
-                Console.ReadLine();
-                return;
             }
-
-            if (result.Winner == BattleField.SavedAndStoppedResult)
+            finally
             {
-                Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
-                Console.WriteLine("Нажмите Enter для возврата в меню...");
-                Console.ReadLine();
-                return;
+                ObserverRegistry.Detach(army1);
+                ObserverRegistry.Detach(army2);
             }
-            if (result.Winner == BattleField.StoppedWithoutSaveResult)
-            {
-                Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
-                Console.WriteLine("Нажмите Enter для возврата в меню...");
-                Console.ReadLine();
-                return;
-            }
-
-            Console.WriteLine($"\nПобедитель: {result.Winner}");
-            Console.WriteLine($"Ходов: {result.Turns}");
-            AskToSaveBattle(result);
-            Console.ReadLine();
         }
 
         private IArmy CreateArmyWithChoice(string armyName, int budget)
@@ -342,7 +362,7 @@ namespace Presentation
             if (_logger is RecordingBattleLogger rec)
                 rec.Clear();
 
-            Console.Clear();
+            ClearConsole();
 
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
             var light = new LightUnitCreator(_random).CreateUnit("Light");
@@ -406,6 +426,8 @@ namespace Presentation
             if (_logger is not IRecordingBattleLogger rec)
             {
                 Console.WriteLine("\n(Сохранение недоступно: логгер не RecordingBattleLogger)");
+                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.ReadLine();
                 return;
             }
 
@@ -422,11 +444,13 @@ namespace Presentation
             var fileName = saveService.Save(save, saveName);
 
             Console.WriteLine($"Сохранено: saves/{fileName}");
+            Console.WriteLine("Нажмите Enter для возврата в меню...");
+            Console.ReadLine();
         }
 
         private void LoadGame()
         {
-            Console.Clear();
+            ClearConsole();
 
             var saveService = BattleSaveService.Instance;
             var saves = saveService.ListSaves();
@@ -463,7 +487,7 @@ namespace Presentation
             var chosen = saves[n - 1];
             var save = saveService.Load(chosen.FileName);
 
-            Console.Clear();
+            ClearConsole();
             Console.WriteLine($"=== Загрузка: {chosen.FileName} ===");
             Console.WriteLine($"Сохранено (UTC): {save.SavedAtUtc:yyyy-MM-dd HH:mm:ss}");
             Console.WriteLine($"Ходов уже сыграно: {save.Turns}");
@@ -496,44 +520,53 @@ namespace Presentation
             ObserverRegistry.Attach(restored.Army1);
             ObserverRegistry.Attach(restored.Army2);
 
-            Console.WriteLine("Бой восстановлен.");
-            Console.WriteLine($"Следующий раунд: {restored.Turns + 1}");
-            Console.WriteLine($"Следующей атакует: {(restored.Army1Turn ? restored.Army1.Name : restored.Army2.Name)}");
-            Console.WriteLine($"Счёт: {restored.ScoreArmy1} : {restored.ScoreArmy2}");
-            Console.WriteLine();
-            Console.WriteLine("Нажмите Enter, чтобы продолжить бой...");
-            Console.ReadLine();
-
-            var result = _battleField.StartBattle(
-                restored.Army1,
-                restored.Army2,
-                restored.Turns,
-                restored.Army1Turn,
-                restored.ScoreArmy1,
-                restored.ScoreArmy2,
-                autoMode: false,
-                showRoundMenuBeforeFirstRound: false);
-
-            if (result.Winner == BattleField.SavedAndStoppedResult)
+            try
             {
-                Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
-                Console.WriteLine("Нажмите Enter для возврата в меню...");
+                Console.WriteLine("Бой восстановлен.");
+                Console.WriteLine($"Следующий раунд: {restored.Turns + 1}");
+                Console.WriteLine($"Следующей атакует: {(restored.Army1Turn ? restored.Army1.Name : restored.Army2.Name)}");
+                Console.WriteLine($"Счёт: {restored.ScoreArmy1} : {restored.ScoreArmy2}");
+                Console.WriteLine();
+                Console.WriteLine("Нажмите Enter, чтобы продолжить бой...");
                 Console.ReadLine();
-                return;
-            }
 
-            if (result.Winner == BattleField.StoppedWithoutSaveResult)
+                ClearBattleConsole();
+
+                var result = _battleField.StartBattle(
+                    restored.Army1,
+                    restored.Army2,
+                    restored.Turns,
+                    restored.Army1Turn,
+                    restored.ScoreArmy1,
+                    restored.ScoreArmy2,
+                    autoMode: false,
+                    showRoundMenuBeforeFirstRound: false);
+
+                if (result.Winner == BattleField.SavedAndStoppedResult)
+                {
+                    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
+
+                if (result.Winner == BattleField.StoppedWithoutSaveResult)
+                {
+                    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
+
+                Console.WriteLine($"\nПобедитель: {result.Winner}");
+                Console.WriteLine($"Ходов: {result.Turns}");
+                AskToSaveBattle(result);
+            }
+            finally
             {
-                Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
-                Console.WriteLine("Нажмите Enter для возврата в меню...");
-                Console.ReadLine();
-                return;
+                ObserverRegistry.Detach(restored.Army1);
+                ObserverRegistry.Detach(restored.Army2);
             }
-
-            Console.WriteLine($"\nПобедитель: {result.Winner}");
-            Console.WriteLine($"Ходов: {result.Turns}");
-            AskToSaveBattle(result);
-            Console.ReadLine();
         }
 
         private void RenumberUnitsFromFront(IArmy army, bool isArmy1)
@@ -590,6 +623,180 @@ namespace Presentation
                 current = decorator.GetInnerUnit();
             }
             return current.GetType();
+        }
+
+        private void ClearConsole()
+        {
+            if (Console.IsOutputRedirected)
+                return;
+
+            try
+            {
+                EnableAnsiClearSequences();
+                EnterAlternateScreen();
+                Console.Write("\u001b[2J\u001b[H");
+                Console.Out.Flush();
+            }
+            catch (IOException)
+            {
+                Console.WriteLine();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine();
+            }
+
+            try
+            {
+                Console.Clear();
+                Console.SetCursorPosition(0, 0);
+            }
+            catch (IOException)
+            {
+                Console.WriteLine();
+            }
+        }
+
+        public static void RestoreConsoleScreen()
+        {
+            if (!_alternateScreenEnabled || Console.IsOutputRedirected)
+                return;
+
+            try
+            {
+                Console.Write("\u001b[?1049l");
+                Console.Out.Flush();
+            }
+            catch (IOException)
+            {
+            }
+            finally
+            {
+                _alternateScreenEnabled = false;
+            }
+        }
+
+        private static void ClearBattleConsole()
+        {
+            RestoreConsoleScreen();
+
+            if (Console.IsOutputRedirected)
+                return;
+
+            try
+            {
+                EnableAnsiClearSequences();
+                ResetMainConsoleScrollback();
+                Console.Write("\u001b[3J\u001b[2J\u001b[1;1H");
+                Console.Out.Flush();
+                Console.Clear();
+                MoveCursorToVisibleHome();
+                Console.Write("\u001b[1;1H");
+                Console.Out.Flush();
+            }
+            catch (IOException)
+            {
+                Console.WriteLine();
+            }
+            catch (UnauthorizedAccessException)
+            {
+                Console.WriteLine();
+            }
+        }
+
+        private static void ResetMainConsoleScrollback()
+        {
+            if (!OperatingSystem.IsWindows())
+                return;
+
+            try
+            {
+                int width = Math.Max(Console.BufferWidth, Console.WindowWidth);
+                int height = Math.Max(Console.WindowHeight, 1);
+
+                Console.SetCursorPosition(0, 0);
+
+                if (Console.BufferHeight != height)
+                    Console.SetBufferSize(width, height);
+
+                MoveCursorToVisibleHome();
+
+                Console.Clear();
+                MoveCursorToVisibleHome();
+                Console.Write("\u001b[1;1H");
+                Console.Out.Flush();
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (PlatformNotSupportedException)
+            {
+            }
+        }
+
+        private static void MoveCursorToVisibleHome()
+        {
+            if (!OperatingSystem.IsWindows())
+                return;
+
+            try
+            {
+                if (Console.WindowLeft != 0 || Console.WindowTop != 0)
+                    Console.SetWindowPosition(0, 0);
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+            catch (PlatformNotSupportedException)
+            {
+            }
+        }
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetStdHandle(int nStdHandle);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
+
+        private static void EnterAlternateScreen()
+        {
+            if (_alternateScreenEnabled)
+                return;
+
+            Console.Write("\u001b[?1049h");
+            _alternateScreenEnabled = true;
+        }
+
+        private static void EnableAnsiClearSequences()
+        {
+            if (_virtualTerminalModeChecked || !OperatingSystem.IsWindows())
+                return;
+
+            _virtualTerminalModeChecked = true;
+
+            IntPtr handle = GetStdHandle(StdOutputHandle);
+            if (handle == IntPtr.Zero || handle == new IntPtr(-1))
+                return;
+
+            if (!GetConsoleMode(handle, out int mode))
+                return;
+
+            SetConsoleMode(handle, mode | EnableVirtualTerminalProcessing);
         }
     }
 }

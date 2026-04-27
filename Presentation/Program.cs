@@ -30,7 +30,15 @@ namespace Presentation
                 formation);
 
             var menu = new ConsoleMenu(randomService, logger, damageCalculator, battleField);
-            menu.Run();
+
+            try
+            {
+                menu.Run();
+            }
+            finally
+            {
+                ConsoleMenu.RestoreConsoleScreen();
+            }
         }
     }
 }

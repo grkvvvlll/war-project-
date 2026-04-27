@@ -5,11 +5,9 @@ namespace Core.Entities.Units
 {
     public class LightUnit : Unit, ICanBeHealed, ICanBeCloned
     {
-        private IRandomService random;
-
         public LightUnit(string name, int attack, int defence, int health, int cost, IRandomService random) : base(name, attack, defence, health, cost)
         {
-            this.random = random;
+            SpecialAbility = new SquireAbility(random);
         }
 
         public LightUnit(

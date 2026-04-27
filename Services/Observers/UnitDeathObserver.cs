@@ -33,14 +33,15 @@ namespace Services.Observers
 
             Directory.CreateDirectory(_logDir);
 
-            string deathLine = $"[BEEP] {unit.Name} погиб";
+            string deathLine = $"[BEEP] {unit.Name} \u043F\u043E\u0433\u0438\u0431";
 
             lock (_lock)
             {
                 File.AppendAllText(_logPath, deathLine + Environment.NewLine, Encoding.UTF8);
             }
 
-            Console.WriteLine($"\a🔔 {unit.Name} погиб!");
+            if (!OperatingSystem.IsWindows())
+                return;
 
             try
             {
