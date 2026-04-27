@@ -127,7 +127,7 @@ namespace Presentation
                 File.WriteAllText(logPath, string.Empty);
             }
         }
-        
+
         private void StartNewGame()
         {
             ClearLogFile();
@@ -183,7 +183,7 @@ namespace Presentation
 
             var result = _battleField.StartBattle(army1, army2, autoMode: false);
 
-            if (result.Winner == BattleField.DrawResult)  // ← НОВОЕ
+            if (result.Winner == BattleField.DrawResult)
             {
                 Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
                 AskToSaveBattle(result);
@@ -234,7 +234,6 @@ namespace Presentation
                 }
                 else
                 {
-                    // Некорректный ввод
                     Console.ForegroundColor = ConsoleColor.Red;
                     Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
                     Console.ResetColor();
@@ -311,7 +310,6 @@ namespace Presentation
         {
             Console.WriteLine($"=== {army.Name} (Бюджет: {army.TotalCost} монет) ===");
 
-            // Для подсчета статистики нужно заглядывать внутрь декораторов
             var heavyCount = army.Units.Count(u => GetBaseType(u) == typeof(HeavyUnit));
             var lightCount = army.Units.Count(u => GetBaseType(u) == typeof(LightUnit));
             var archerCount = army.Units.Count(u => GetBaseType(u) == typeof(Archer));
@@ -339,6 +337,11 @@ namespace Presentation
 
         private void ShowHelp()
         {
+            // Очистка лога и логгера перед показом помощи
+            ClearLogFile();
+            if (_logger is RecordingBattleLogger rec)
+                rec.Clear();
+
             Console.Clear();
 
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
@@ -486,7 +489,7 @@ namespace Presentation
             }
 
             var restored = saveService.RestoreBattle(save, _random);
-            
+
             if (_battleField is BattleField bf)
                 bf.SetFormation(restored.Formation);
 
@@ -533,12 +536,10 @@ namespace Presentation
             Console.ReadLine();
         }
 
-        // Перенумерация юнитов от фронта ===
         private void RenumberUnitsFromFront(IArmy army, bool isArmy1)
         {
             var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
 
-            // Для стенки — всегда сверху вниз для обеих армий
             bool wallFormation = _battleField is BattleField bf && bf.GetFormation() is WallFormation;
 
             if (isArmy1 && !wallFormation)
@@ -563,7 +564,6 @@ namespace Presentation
 
         private string GetUnitTypeIcon(IUnit unit)
         {
-            // Раскручиваем декораторы до базового юнита
             IUnit current = unit;
             while (current is Core.Entities.Buffs.UnitDecorator decorator)
             {
