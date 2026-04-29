@@ -1,18 +1,9 @@
-using System.Text;
 using Core.Interfaces;
 
 namespace Services.Observers
 {
     public class UnitDeathObserver
     {
-        private static readonly object _lock = new();
-
-        private readonly string _logDir =
-            Path.Combine(AppContext.BaseDirectory, "logs");
-
-        private readonly string _logPath =
-            Path.Combine(AppContext.BaseDirectory, "logs", "damage-log.txt");
-
         public bool IsEnabled { get; set; } = true;
 
         public void Subscribe(IUnit unit)
@@ -30,15 +21,6 @@ namespace Services.Observers
         {
             if (!IsEnabled)
                 return;
-
-            Directory.CreateDirectory(_logDir);
-
-            string deathLine = $"[BEEP] {unit.Name} \u043F\u043E\u0433\u0438\u0431";
-
-            lock (_lock)
-            {
-                File.AppendAllText(_logPath, deathLine + Environment.NewLine, Encoding.UTF8);
-            }
 
             if (!OperatingSystem.IsWindows())
                 return;

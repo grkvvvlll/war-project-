@@ -19,6 +19,7 @@ namespace Presentation
     {
         private const int StdOutputHandle = -11;
         private const int EnableVirtualTerminalProcessing = 0x0004;
+        private const int MinScrollableBufferHeight = 1000;
 
         private static bool _virtualTerminalModeChecked;
         private static bool _alternateScreenEnabled;
@@ -105,7 +106,7 @@ namespace Presentation
                 Console.WriteLine();
                 Console.WriteLine("Наблюдатель 2 пишет только в logs/damage-log.txt.");
                 Console.WriteLine("Если он выключен, изменения HP в файл не добавляются.");
-                Console.WriteLine("Смерти [BEEP] пишет наблюдатель 1, если он включён.");
+                Console.WriteLine("Наблюдатель 1 только подаёт звук при смерти юнита.");
                 Console.WriteLine("Боевые сообщения в консоли выводит обычный логгер боя.");
                 Console.WriteLine("0. Назад");
                 Console.Write("Выберите пункт: ");
@@ -194,8 +195,6 @@ namespace Presentation
                 Console.WriteLine();
                 Console.WriteLine("Нажмите Enter для начала боя...");
                 Console.ReadLine();
-
-                ClearBattleConsole();
 
                 var result = _battleField.StartBattle(army1, army2, autoMode: false);
 
@@ -530,8 +529,6 @@ namespace Presentation
                 Console.WriteLine("Нажмите Enter, чтобы продолжить бой...");
                 Console.ReadLine();
 
-                ClearBattleConsole();
-
                 var result = _battleField.StartBattle(
                     restored.Army1,
                     restored.Army2,
@@ -633,8 +630,8 @@ namespace Presentation
             try
             {
                 EnableAnsiClearSequences();
-                EnterAlternateScreen();
-                Console.Write("\u001b[2J\u001b[H");
+                ResetMainConsoleScrollback();
+                Console.Write("\u001b[3J\u001b[2J\u001b[H");
                 Console.Out.Flush();
             }
             catch (IOException)
@@ -712,17 +709,23 @@ namespace Presentation
             try
             {
                 int width = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                int height = Math.Max(Console.WindowHeight, 1);
+                int windowHeight = Math.Max(Console.WindowHeight, 1);
+                int originalHeight = Math.Max(Console.BufferHeight, windowHeight);
 
                 Console.SetCursorPosition(0, 0);
 
-                if (Console.BufferHeight != height)
-                    Console.SetBufferSize(width, height);
+                if (Console.BufferHeight != windowHeight)
+                    Console.SetBufferSize(width, windowHeight);
 
                 MoveCursorToVisibleHome();
 
                 Console.Clear();
                 MoveCursorToVisibleHome();
+
+                int restoredHeight = Math.Max(originalHeight, MinScrollableBufferHeight);
+                if (Console.BufferHeight != restoredHeight)
+                    Console.SetBufferSize(width, restoredHeight);
+
                 Console.Write("\u001b[1;1H");
                 Console.Out.Flush();
             }
