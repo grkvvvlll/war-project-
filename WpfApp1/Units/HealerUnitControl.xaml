@@ -1,0 +1,59 @@
+﻿<UserControl x:Class="WpfPresentation.Views.Units.HealerUnitControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="48" Height="72">
+
+    <UserControl.Resources>
+        <Storyboard x:Key="HealAnim">
+            <ColorAnimation Storyboard.TargetName="Root"
+                    Storyboard.TargetProperty="Background.(SolidColorBrush.Color)"
+                    To="#331D9E75" Duration="0:0:0.2"
+                    AutoReverse="True"/>
+        </Storyboard>
+        <Storyboard x:Key="HitAnim">
+            <ColorAnimation Storyboard.TargetName="Root"
+                    Storyboard.TargetProperty="Background.(SolidColorBrush.Color)"
+                    To="#33E24B4A" Duration="0:0:0.1"
+                    AutoReverse="True"/>
+        </Storyboard>
+        <Storyboard x:Key="DeathAnim">
+            <DoubleAnimation Storyboard.TargetName="Root"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1" To="0" Duration="0:0:0.5"/>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Canvas x:Name="Root" Width="48" Height="72" Background="Transparent">
+        <Canvas.RenderTransform>
+            <TranslateTransform X="0" Y="0"/>
+        </Canvas.RenderTransform>
+        <Canvas.Resources>
+            <SolidColorBrush x:Name="StrokeColor" x:Key="StrokeBrush" Color="#B4B2A9"/>
+        </Canvas.Resources>
+
+        <!-- Венок (цветочки) -->
+        <Ellipse Canvas.Left="13" Canvas.Top="2" Width="5" Height="5"
+                 Stroke="{StaticResource StrokeBrush}" StrokeThickness="1" Fill="Transparent"/>
+        <Ellipse Canvas.Left="21" Canvas.Top="0" Width="5" Height="5"
+                 Stroke="{StaticResource StrokeBrush}" StrokeThickness="1" Fill="Transparent"/>
+        <Ellipse Canvas.Left="29" Canvas.Top="2" Width="5" Height="5"
+                 Stroke="{StaticResource StrokeBrush}" StrokeThickness="1" Fill="Transparent"/>
+
+        <!-- Голова -->
+        <Ellipse Canvas.Left="17" Canvas.Top="6" Width="14" Height="14"
+                 Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5" Fill="Transparent"/>
+
+        <!-- Тело (длинная одежда) -->
+        <Line X1="24" Y1="20" X2="24" Y2="45" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+        <Path Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5" Fill="Transparent"
+              Data="M16,30 Q10,40 14,56 L34,56 Q38,40 32,30 Z"/>
+
+        <!-- Руки -->
+        <Line X1="24" Y1="26" X2="10" Y2="32" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+        <Line X1="24" Y1="26" X2="38" Y2="32" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+
+        <!-- Крест в руке -->
+        <Line X1="38" Y1="26" X2="38" Y2="38" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+        <Line X1="34" Y1="30" X2="42" Y2="30" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+    </Canvas>
+</UserControl>
