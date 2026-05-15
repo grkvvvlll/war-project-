@@ -3,6 +3,7 @@ using Core.Interfaces;
 using Core.Formations;
 using Services.Battle;
 using Services.Random;
+using Services.Storage;
 
 namespace WpfPresentation.Engine
 {
@@ -26,6 +27,12 @@ namespace WpfPresentation.Engine
         public int Round => _round;
         public bool IsOver => !HasAlive(_army1) || !HasAlive(_army2);
 
+        // Exposing state for save/load
+        public IArmy Army1 => _army1;
+        public IArmy Army2 => _army2;
+        public bool Army1TurnState => _army1Turn;
+        public IBattleFormation Formation => _formation;
+
         public WpfBattleEngine(IArmy army1, IArmy army2, IBattleFormation formation)
         {
             _army1 = army1;
@@ -33,12 +40,33 @@ namespace WpfPresentation.Engine
             _formation = formation;
             _random = new RandomService();
             _logger = new WpfBattleLogger();
+            _logger.SetArmies(_army1, _army2);   // ← индексы для анимаций
 
             var damageCalculator = new DamageCalculator();
             _meleeService = new MeleeService(damageCalculator, _logger, formation);
             _specialAbilityService = new SpecialAbilityService(_logger, formation);
 
             _army1Turn = _random.Next(0, 2) == 0;
+        }
+
+        // Resume from a saved game
+        public WpfBattleEngine(BattleResumeData resume)
+        {
+            _army1 = resume.Army1;
+            _army2 = resume.Army2;
+            _formation = resume.Formation;
+            _random = new RandomService();
+            _logger = new WpfBattleLogger();
+            _logger.SetArmies(_army1, _army2);   // ← индексы для анимаций
+
+            var damageCalculator = new DamageCalculator();
+            _meleeService = new MeleeService(damageCalculator, _logger, _formation);
+            _specialAbilityService = new SpecialAbilityService(_logger, _formation);
+
+            _round = resume.Turns;
+            _army1Turn = resume.Army1Turn;
+            _score1 = resume.ScoreArmy1;
+            _score2 = resume.ScoreArmy2;
         }
 
         public void SetFormation(IBattleFormation formation)

@@ -89,6 +89,10 @@ namespace WpfPresentation
 
         private void ShowBattle()
         {
+            // Нумеруем юнитов с фронта — как в консольном слое
+            RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
+            RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
+
             _engine = new WpfBattleEngine(_army1!, _army2!, _selectedFormation!);
             _battleView = new BattleView(_army1!, _army2!, _selectedFormation!);
             _battleView.NextRoundRequested += OnNextRound;
@@ -119,31 +123,54 @@ namespace WpfPresentation
                 {
                     case BattleEventType.MeleeHit:
                     case BattleEventType.MeleeMiss:
-                        _battleView.PlayAttack(e.ActorIsArmy1, e.ActorIndex);
-                        _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex);
-                        await Task.Delay(300);
+                        _battleView.PlayAttack(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
+                        await Task.Delay(550);
                         break;
+
                     case BattleEventType.ArrowShot:
-                        _battleView.PlayShoot(e.ActorIsArmy1, e.ActorIndex);
-                        _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex);
-                        await Task.Delay(300);
+                        _battleView.PlayShoot(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
+                        await Task.Delay(550);
                         break;
+
                     case BattleEventType.Heal:
-                        _battleView.PlayHeal(e.ActorIsArmy1, e.ActorIndex);
-                        await Task.Delay(200);
-                        break;
-                    case BattleEventType.Spell:
-                        _battleView.PlaySpell(e.ActorIsArmy1, e.ActorIndex);
-                        await Task.Delay(200);
-                        break;
-                    case BattleEventType.Death:
-                        _battleView.PlayDeath(e.TargetIsArmy1, e.TargetIndex);
+                        _battleView.PlayHeal(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        _battleView.PlayHealTarget(e.TargetIsArmy1, e.TargetIndex, e.TargetName); // зелёная подсветка
                         await Task.Delay(500);
                         break;
+
+                    case BattleEventType.Spell when e.Message == "Клонирование":
+                        // 1. Маг произносит заклинание
+                        _battleView.PlaySpell(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        await Task.Delay(500);
+                        // 2. Белая вспышка — магия формирует копию
+                        _battleView.PlayCloneFlash(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        await Task.Delay(650);
+                        // 3. Перерисовываем — клон уже вставлен в армию движком
+                        _battleView.DrawBattlefield();
+                        // 4. Плавное появление клона
+                        _battleView.PlayCloneAppear(e.ActorIsArmy1, e.TargetName + " (клон)");
+                        await Task.Delay(600);
+                        break;
+
+                    case BattleEventType.Spell:
+                        _battleView.PlaySpell(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        await Task.Delay(400);
+                        break;
+
+                    case BattleEventType.Death:
+                        _battleView.PlayDeath(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
+                        await Task.Delay(750);
+                        // Сразу перестраиваем строй — мёртвый уже удалён из армии движком
+                        _battleView.DrawBattlefield();
+                        break;
+
                     case BattleEventType.RoundEnd:
                         _battleView.UpdateScore(e.Score1, e.Score2);
                         _battleView.UpdateRound(e.Round + 1);
                         break;
+
                     case BattleEventType.BattleEnd:
                         _battleView.DrawBattlefield();
                         MessageBox.Show($"Победитель: {e.Winner}\nСчёт: {e.Score1} : {e.Score2}");
@@ -172,6 +199,37 @@ namespace WpfPresentation
         {
             // TODO: показать настройки наблюдателей
             MessageBox.Show("Настройки наблюдателей — скоро!");
+        }
+
+        /// <summary>
+        /// Переименовывает юнитов армии так, чтобы фронтовой юнит всегда был #1.
+        /// Логика идентична ConsoleMenu.RenumberUnitsFromFront.
+        /// </summary>
+        private static void RenumberUnitsFromFront(IArmy army, bool isArmy1, IBattleFormation formation)
+        {
+            var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
+            bool isWall = formation is WallFormation;
+
+            if (isArmy1 && !isWall)
+            {
+                // Армия 1 в обычных построениях: фронт — последний в списке → он получает №1
+                for (int i = 0; i < aliveUnits.Count; i++)
+                {
+                    var unit = aliveUnits[aliveUnits.Count - 1 - i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
+                }
+            }
+            else
+            {
+                // Армия 2 или стенка: фронт — первый в списке → он получает №1
+                for (int i = 0; i < aliveUnits.Count; i++)
+                {
+                    var unit = aliveUnits[i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
+                }
+            }
         }
     }
 }

@@ -83,14 +83,11 @@
             <!-- Поле боя -->
             <Border Grid.Row="1" BorderBrush="#3A3A38" BorderThickness="1"
                     Background="#252523" Margin="0,12,0,0">
-                <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                              VerticalScrollBarVisibility="Auto">
-                    <Viewbox Stretch="Uniform">
-                        <Canvas x:Name="BattleCanvas"
-                                HorizontalAlignment="Center"
-                                VerticalAlignment="Center"/>
-                    </Viewbox>
-                </ScrollViewer>
+                <Viewbox Stretch="Uniform">
+                    <Canvas x:Name="BattleCanvas"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                </Viewbox>
             </Border>
 
             <!-- Лог событий -->
