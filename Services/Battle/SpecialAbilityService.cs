@@ -2,7 +2,6 @@
 using Core.Entities.Buffs;
 using Core.Entities.Units;
 using Core.Interfaces;
-using Core.Entities;
 using Core.Formations;
 using Services.Observers;
 
@@ -195,7 +194,6 @@ namespace Services.Battle
                 if (!neighbor.IsAlive) continue;
                 if (!unit.SpecialAbility.CanTarget(unit, neighbor, true)) continue;
                 if (GetBuffCount(neighbor) >= 4) continue;
-
                 targetHeavy = neighbor;
                 targetIndex = idx;
                 break;
@@ -212,6 +210,7 @@ namespace Services.Battle
             if (squireAbility.LastAppliedUnit == null) return;
 
             ((Core.Entities.Army)army).SetUnit(targetIndex, squireAbility.LastAppliedUnit);
+
             string buffName = "Бафф";
             int atkDelta = 0, defDelta = 0;
 
@@ -240,6 +239,9 @@ namespace Services.Battle
                 if (defDelta != 0) Console.Write($"DEF {oldDefence} -> {oldDefence + defDelta}");
                 Console.WriteLine();
             }
+
+            // Оповещаем WPF-логгер — вся логика уже выполнена выше
+            _logger.LogBuffAdded(unit, targetHeavy, buffName, isArmy1);
         }
 
         // ── Маг ───────────────────────────────────────────────────────────────

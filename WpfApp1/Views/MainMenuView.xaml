@@ -162,9 +162,55 @@
                     Margin="0,0,0,10"/>
 
             <Button Content="Настройки наблюдателей"
-                    Style="{StaticResource SecondaryButtonStyle}"
-                    x:Name="ObserversButton"
-                    Margin="0,0,0,0"/>
+        Style="{StaticResource SecondaryButtonStyle}"
+        x:Name="ObserversButton"
+        Margin="0,0,0,0"/>
+
+            <!-- Выпадающая панель наблюдателей -->
+            <Border x:Name="ObserversPanel"
+        BorderBrush="#444441"
+        BorderThickness="1"
+        Background="#252523"
+        Padding="16,12"
+        Margin="0,2,0,0"
+        Visibility="Collapsed">
+                <StackPanel>
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Звук при гибели юнита"
+                           FontFamily="Georgia" FontSize="13"
+                           Foreground="#D3D1C7"/>
+                            <TextBlock Text="Beep"
+                           FontSize="10" Foreground="#5F5E5A"
+                           Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button x:Name="DeathToggle" Grid.Column="1"
+                    Height="28" FontFamily="Georgia" FontSize="12"
+                    Cursor="Hand" Background="Transparent" BorderThickness="1"/>
+                    </Grid>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="80"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="Лог урона в файл"
+                           FontFamily="Georgia" FontSize="13"
+                           Foreground="#D3D1C7"/>
+                            <TextBlock Text="logs/damage-log.txt"
+                           FontSize="10" Foreground="#5F5E5A"
+                           Margin="0,2,0,0"/>
+                        </StackPanel>
+                        <Button x:Name="HealthToggle" Grid.Column="1"
+                    Height="28" FontFamily="Georgia" FontSize="12"
+                    Cursor="Hand" Background="Transparent" BorderThickness="1"/>
+                    </Grid>
+                </StackPanel>
+            </Border>
 
             <!-- Разделитель -->
             <Rectangle Height="1"

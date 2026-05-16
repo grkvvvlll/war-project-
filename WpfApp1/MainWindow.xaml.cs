@@ -1,7 +1,11 @@
-﻿using System.Windows;
-using System.Text;
+﻿using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
+using System.Windows.Media;
 using Core.Formations;
 using Core.Interfaces;
+using Services.Observers;
 using WpfPresentation.Engine;
 using WpfPresentation.Views;
 
@@ -90,7 +94,6 @@ namespace WpfPresentation
 
         private void ShowBattle()
         {
-            // Нумеруем юнитов с фронта — как в консольном слое
             RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
             RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
 
@@ -131,44 +134,50 @@ namespace WpfPresentation
                     case BattleEventType.MeleeMiss:
                         _battleView.PlayAttack(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
                         _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
-                        await Task.Delay(550);
+                        await Task.Delay(850);
                         break;
 
                     case BattleEventType.ArrowShot:
+                        // Лучник тянет лук, стрела летит 500 мс, потом вспышка попадания
                         _battleView.PlayShoot(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        _battleView.PlayArrow(
+                            e.ActorIsArmy1, e.ActorIndex, e.ActorName,
+                            e.TargetIsArmy1, e.TargetIndex, e.TargetName,
+                            flightMs: 500);
+                        await Task.Delay(500);
                         _battleView.PlayHit(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
-                        await Task.Delay(550);
+                        await Task.Delay(450);
                         break;
 
                     case BattleEventType.Heal:
                         _battleView.PlayHeal(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
-                        _battleView.PlayHealTarget(e.TargetIsArmy1, e.TargetIndex, e.TargetName); // зелёная подсветка
-                        await Task.Delay(500);
+                        _battleView.PlayHealTarget(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
+                        await Task.Delay(800);
+                        break;
+
+                    case BattleEventType.BuffAdded:
+                        _battleView.PlayBuffAdded(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
+                        await Task.Delay(700);
+                        _battleView.DrawBattlefield();
                         break;
 
                     case BattleEventType.Spell when e.Message == "Клонирование":
-                        // 1. Маг произносит заклинание
                         _battleView.PlaySpell(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
-                        await Task.Delay(500);
-                        // 2. Белая вспышка — магия формирует копию
-                        _battleView.PlayCloneFlash(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
                         await Task.Delay(650);
-                        // 3. Перерисовываем — клон уже вставлен в армию движком
+                        _battleView.PlayCloneFlash(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
+                        await Task.Delay(800);
                         _battleView.DrawBattlefield();
-                        // 4. Плавное появление клона
                         _battleView.PlayCloneAppear(e.ActorIsArmy1, e.TargetName + " (клон)");
-                        await Task.Delay(600);
+                        await Task.Delay(700);
                         break;
 
                     case BattleEventType.Spell:
                         _battleView.PlaySpell(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
-                        await Task.Delay(400);
+                        await Task.Delay(600);
                         break;
 
                     case BattleEventType.Death:
                         _battleView.PlayDeath(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
-                        await Task.Delay(750);
-                        // Сразу перестраиваем строй — мёртвый уже удалён из армии движком
                         _battleView.DrawBattlefield();
                         break;
 
@@ -178,6 +187,8 @@ namespace WpfPresentation
                         break;
 
                     case BattleEventType.BattleEnd:
+                        RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
+                        RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
                         _battleView.DrawBattlefield();
                         MessageBox.Show($"Победитель: {e.Winner}\nСчёт: {e.Score1} : {e.Score2}");
                         ShowMainMenu();
@@ -185,6 +196,9 @@ namespace WpfPresentation
                 }
             }
 
+            // Перенумерация с фронта в конце каждого раунда
+            RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
+            RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
             _battleView.DrawBattlefield();
             _battleView.NextRoundButton.IsEnabled = true;
             SyncBattleView();
@@ -263,7 +277,6 @@ namespace WpfPresentation
         private void SetBattleButtonsEnabled(bool isEnabled)
         {
             if (_battleView == null) return;
-
             _battleView.NextRoundButton.IsEnabled = isEnabled;
             _battleView.UndoButton.IsEnabled = isEnabled && (_engine?.History.CanUndo ?? false);
             _battleView.RedoButton.IsEnabled = isEnabled && (_engine?.History.CanRedo ?? false);
@@ -277,39 +290,126 @@ namespace WpfPresentation
         private void SyncBattleView()
         {
             if (_engine == null || _battleView == null) return;
-
             _army1 = _engine.Army1;
             _army2 = _engine.Army2;
             _selectedFormation = _engine.Formation;
             _battleView.UpdateState(
-                _engine.Army1,
-                _engine.Army2,
-                _engine.Formation,
-                _engine.Score1,
-                _engine.Score2,
-                _engine.Round);
+                _engine.Army1, _engine.Army2, _engine.Formation,
+                _engine.Score1, _engine.Score2, _engine.Round);
             _battleView.UpdateHistory(
-                _engine.History.Entries,
-                _engine.History.CanUndo,
-                _engine.History.CanRedo);
+                _engine.History.Entries, _engine.History.CanUndo, _engine.History.CanRedo);
         }
 
         private void ShowLoadGame()
         {
-            // TODO: показать экран загрузки
             MessageBox.Show("Загрузить игру — скоро!");
         }
 
         private void ShowHelp()
         {
-            // TODO: показать экран помощи
             MessageBox.Show("Помощь — скоро!");
         }
 
         private void ShowObservers()
         {
-            // TODO: показать настройки наблюдателей
-            MessageBox.Show("Настройки наблюдателей — скоро!");
+            var win = new Window
+            {
+                Title = "Настройки наблюдателей",
+                Width = 380,
+                Height = 220,
+                ResizeMode = ResizeMode.NoResize,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Owner = this,
+                Background = new SolidColorBrush(Color.FromRgb(0x2C, 0x2C, 0x2A))
+            };
+
+            var root = new StackPanel { Margin = new Thickness(28) };
+
+            root.Children.Add(new TextBlock
+            {
+                Text = "Наблюдатели",
+                FontFamily = new FontFamily("Georgia"),
+                FontSize = 18,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xFA, 0xC7, 0x75)),
+                Margin = new Thickness(0, 0, 0, 20)
+            });
+
+            root.Children.Add(MakeObserverRow(
+                "Звук при гибели юнита",
+                "Beep при каждой смерти",
+                ObserverRegistry.DeathObserver.IsEnabled,
+                v => ObserverRegistry.DeathObserver.IsEnabled = v));
+
+            root.Children.Add(MakeObserverRow(
+                "Лог урона в файл",
+                "logs/damage-log.txt",
+                ObserverRegistry.HealthObserver.IsEnabled,
+                v => ObserverRegistry.HealthObserver.IsEnabled = v));
+
+            win.Content = root;
+            win.ShowDialog();
+        }
+
+        private static UIElement MakeObserverRow(string title, string subtitle,
+            bool initial, Action<bool> onChange)
+        {
+            var row = new Grid { Margin = new Thickness(0, 0, 0, 14) };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+
+            var textCol = new StackPanel();
+            textCol.Children.Add(new TextBlock
+            {
+                Text = title,
+                FontFamily = new FontFamily("Georgia"),
+                FontSize = 13,
+                Foreground = new SolidColorBrush(Color.FromRgb(0xD3, 0xD1, 0xC7))
+            });
+            textCol.Children.Add(new TextBlock
+            {
+                Text = subtitle,
+                FontSize = 11,
+                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x5E, 0x5A)),
+                Margin = new Thickness(0, 2, 0, 0)
+            });
+            Grid.SetColumn(textCol, 0);
+            row.Children.Add(textCol);
+
+            bool state = initial;
+
+            var btn = new Button
+            {
+                Width = 72,
+                Height = 30,
+                FontFamily = new FontFamily("Georgia"),
+                FontSize = 12,
+                Cursor = Cursors.Hand,
+                BorderThickness = new Thickness(1),
+                Background = Brushes.Transparent
+            };
+            UpdateToggleButton(btn, state);
+            Grid.SetColumn(btn, 1);
+
+            btn.Click += (_, _) =>
+            {
+                state = !state;
+                onChange(state);
+                UpdateToggleButton(btn, state);
+            };
+
+            row.Children.Add(btn);
+            return row;
+        }
+
+        private static void UpdateToggleButton(Button btn, bool state)
+        {
+            btn.Content = state ? "ВКЛ" : "ВЫКЛ";
+            btn.Foreground = state
+                ? new SolidColorBrush(Color.FromRgb(0x1D, 0x9E, 0x75))
+                : new SolidColorBrush(Color.FromRgb(0x5F, 0x5E, 0x5A));
+            btn.BorderBrush = state
+                ? new SolidColorBrush(Color.FromRgb(0x1D, 0x9E, 0x75))
+                : new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x41));
         }
 
         /// <summary>
@@ -323,7 +423,6 @@ namespace WpfPresentation
 
             if (isArmy1 && !isWall)
             {
-                // Армия 1 в обычных построениях: фронт — последний в списке → он получает №1
                 for (int i = 0; i < aliveUnits.Count; i++)
                 {
                     var unit = aliveUnits[aliveUnits.Count - 1 - i];
@@ -333,7 +432,6 @@ namespace WpfPresentation
             }
             else
             {
-                // Армия 2 или стенка: фронт — первый в списке → он получает №1
                 for (int i = 0; i < aliveUnits.Count; i++)
                 {
                     var unit = aliveUnits[i];

@@ -163,22 +163,6 @@
                 </StackPanel>
             </Border>
 
-            <Border Grid.Row="1"
-                    BorderBrush="#444441" BorderThickness="1"
-                    Padding="10"
-                    VerticalAlignment="Bottom" Margin="0,0,0,12">
-                <StackPanel>
-                    <TextBlock Text="ИСТОРИЯ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,8"/>
-                    <ListBox x:Name="HistoryList"
-                             Height="150"
-                             Background="#1E1E1C"
-                             BorderBrush="#3A3A38"
-                             Foreground="#D3D1C7"
-                             FontFamily="Georgia"
-                             FontSize="12"/>
-                </StackPanel>
-            </Border>
-
             <StackPanel Grid.Row="2">
                 <Button x:Name="SaveButton" Content="Сохранить"
                         Foreground="#D3D1C7" BorderBrush="#5F5E5A"

@@ -33,11 +33,12 @@
     </UserControl.Resources>
 
     <Grid Background="#2C2C2A">
-        <StackPanel Width="620"
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Width="620"
                     HorizontalAlignment="Center"
-                    VerticalAlignment="Center">
-
-            <!-- Заголовок -->
+                    Margin="0,30,0,30">
+                <!-- Заголовок -->
             <TextBlock Text="Армии сформированы"
                        FontFamily="Georgia"
                        FontSize="28"
@@ -124,5 +125,6 @@
             </Grid>
 
         </StackPanel>
+        </ScrollViewer>
     </Grid>
 </UserControl>

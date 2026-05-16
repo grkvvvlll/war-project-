@@ -136,5 +136,7 @@ namespace Services.Logging
         {
             SlowWrite($"В армии {armyName} лучников нет.");
         }
+
+        public void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1) { }
     }
 }

@@ -90,5 +90,11 @@ namespace Services.Logging
             _inner.LogNoArchers(armyName);
             Add($"В армии {armyName} лучников нет.");
         }
+
+        public void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1)
+        {
+            _inner.LogBuffAdded(squire, target, buffName, isArmy1);
+            Add($"{squire.Name} вручает {target.Name} — {buffName}");
+        }
     }
 }

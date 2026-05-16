@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Core.Entities;
@@ -188,21 +184,30 @@ namespace Services.Storage
         private UnitSnapshot MapUnit(IUnit unit)
         {
             var baseUnit = GetBaseUnit(unit);
+
+            // Собираем баффы от внешнего к внутреннему
+            var buffs = new List<string>();
+            IUnit current = unit;
+            while (current is UnitDecorator dec)
+            {
+                buffs.Add(dec.GetCurrentBuff().BuffType);
+                current = dec.GetInnerUnit();
+            }
+
             var snapshot = new UnitSnapshot
             {
                 UnitType = GetUnitType(baseUnit),
-                Name = unit.Name,
-                Attack = unit.Attack,
-                Defence = unit.Defence,
+                Name = baseUnit.Name,   // чистое имя без баффов — декоратор восстановит его сам
+                Attack = baseUnit.Attack, // базовые статы без бонусов от баффов
+                Defence = baseUnit.Defence,
                 Health = unit.Health,
                 MaxHealth = unit.MaxHealth,
-                Cost = unit.Cost
+                Cost = unit.Cost,
+                Buffs = buffs            // порядок: внешний первый
             };
 
             if (baseUnit is Archer archer)
-            {
                 snapshot.Range = archer.Range;
-            }
             else if (baseUnit is Healer healer)
             {
                 snapshot.HealRange = healer.HealRange;
@@ -248,23 +253,42 @@ namespace Services.Storage
 
         private IUnit RestoreUnit(UnitSnapshot dto, IRandomService random)
         {
-            return dto.UnitType switch
+            // Создаём базового юнита с базовыми статами
+            IUnit unit = dto.UnitType switch
             {
-                "Heavy" => new HeavyUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost),
-
-                "Light" => new LightUnit(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, random),
-
-                "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
-
-                "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.HealRange ?? 0, dto.HealPower ?? 0),
-
-                "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence, dto.Health, dto.MaxHealth, dto.Cost, dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
-
+                "Heavy" => new HeavyUnit(dto.Name, dto.Attack, dto.Defence,
+                                     dto.Health, dto.MaxHealth, dto.Cost),
+                "Light" => new LightUnit(dto.Name, dto.Attack, dto.Defence,
+                                     dto.Health, dto.MaxHealth, dto.Cost, random),
+                "Archer" => new Archer(dto.Name, dto.Attack, dto.Defence,
+                                     dto.Health, dto.MaxHealth, dto.Cost, dto.Range ?? 0),
+                "Healer" => new Healer(dto.Name, dto.Attack, dto.Defence,
+                                     dto.Health, dto.MaxHealth, dto.Cost,
+                                     dto.HealRange ?? 0, dto.HealPower ?? 0),
+                "Wizard" => new Wizard(dto.Name, dto.Attack, dto.Defence,
+                                     dto.Health, dto.MaxHealth, dto.Cost,
+                                     dto.SpellRange ?? 0, dto.ClonePower ?? 0, random),
                 "GulyayGorod" => CreateGulyayGorod(dto),
-
                 _ => throw new InvalidDataException($"Неизвестный тип юнита: {dto.UnitType}")
             };
+
+            // Восстанавливаем цепочку декораторов — баффы хранятся внешний первым,
+            // поэтому оборачиваем в обратном порядке (от внутреннего к внешнему)
+            foreach (var buffType in Enumerable.Reverse(dto.Buffs))
+            {
+                unit = buffType switch
+                {
+                    "Shield" => new ShieldDecorator(unit),
+                    "Helmet" => new HelmetDecorator(unit),
+                    "Spear" => new SpearDecorator(unit),
+                    "Horse" => new HorseDecorator(unit),
+                    _ => unit
+                };
+            }
+
+            return unit;
         }
+
         private string GetFormationType(IBattleFormation formation)
         {
             if (formation is WideBridgeFormation) return "WideBridge";

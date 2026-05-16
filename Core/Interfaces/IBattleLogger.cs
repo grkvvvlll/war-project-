@@ -13,6 +13,8 @@
             int oldHp,
             bool attackerIsArmy1);
 
+        void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1);
+
         void LogDeath(IUnit unit, bool isArmy1);
 
         void LogArcherShot(

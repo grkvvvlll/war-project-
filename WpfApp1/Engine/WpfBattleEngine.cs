@@ -6,6 +6,8 @@ using Services.Commands;
 using Services.Observers;
 using Services.Random;
 using Services.Storage;
+using Core.Entities.Buffs;
+using Core.Entities.Units;
 
 namespace WpfPresentation.Engine
 {
@@ -93,6 +95,10 @@ namespace WpfPresentation.Engine
             _logger.Events.Clear();
             _round++;
 
+            // Только для клонов — маг не вызывает логгер
+            var unitsBefore1 = new HashSet<IUnit>(_army1.Units);
+            var unitsBefore2 = new HashSet<IUnit>(_army2.Units);
+
             if (_army1Turn)
             {
                 _score1 += _meleeService.Execute(_army1, _army2, true);
@@ -114,9 +120,11 @@ namespace WpfPresentation.Engine
                     _score1 += _specialAbilityService.Execute(_army1, _army2, true);
             }
 
+            InjectCloneEvents(_army1, isArmy1: true, unitsBefore1);
+            InjectCloneEvents(_army2, isArmy1: false, unitsBefore2);
+
             _army1.RemoveDeadUnits();
             _army2.RemoveDeadUnits();
-
             _army1Turn = !_army1Turn;
 
             _logger.Events.Add(new BattleEvent
@@ -296,5 +304,41 @@ namespace WpfPresentation.Engine
         }
 
         private bool HasAlive(IArmy army) => army.Units.Any(u => u.IsAlive);
+
+        private void InjectCloneEvents(IArmy army, bool isArmy1, HashSet<IUnit> unitsBefore)
+        {
+            foreach (var unit in army.Units)
+            {
+                if (unitsBefore.Contains(unit)) continue;
+                if (!unit.Name.Contains("(клон)")) continue;
+
+                string originalName = unit.Name.Replace("(клон)", "").Trim();
+                var (wiz, wizIdx) = FindWizard(army);
+
+                _logger.Events.Add(new BattleEvent
+                {
+                    Type = BattleEventType.Spell,
+                    ActorIsArmy1 = isArmy1,
+                    ActorIndex = wizIdx,
+                    ActorName = wiz?.Name ?? "Маг",
+                    TargetIsArmy1 = isArmy1,
+                    TargetName = originalName,
+                    Message = "Клонирование"
+                });
+            }
+        }
+
+        private static (IUnit? wizard, int idx) FindWizard(IArmy army)
+        {
+            var units = army.Units.ToList();
+            for (int i = 0; i < units.Count; i++)
+            {
+                if (!units[i].IsAlive) continue;
+                IUnit cur = units[i];
+                while (cur is UnitDecorator d) cur = d.GetInnerUnit();
+                if (cur is Wizard) return (units[i], i);
+            }
+            return (null, 0);
+        }
     }
 }

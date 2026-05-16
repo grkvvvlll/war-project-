@@ -189,5 +189,20 @@ namespace WpfPresentation.Engine
                 current = dec.GetInnerUnit();
             return current.Name;
         }
+
+        public void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1)
+        {
+            Events.Add(new BattleEvent
+            {
+                Type = BattleEventType.BuffAdded,
+                ActorIsArmy1 = isArmy1,
+                ActorIndex = FindIndex(squire, isArmy1),
+                ActorName = squire.Name,
+                TargetIsArmy1 = isArmy1,
+                TargetIndex = FindIndex(target, isArmy1),
+                TargetName = target.Name,
+                Message = buffName
+            });
+        }
     }
 }

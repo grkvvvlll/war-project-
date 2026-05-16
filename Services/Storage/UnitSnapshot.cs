@@ -16,5 +16,6 @@ namespace Services.Storage
         public int? HealPower { get; set; }
         public int? SpellRange { get; set; }
         public int? ClonePower { get; set; }
+        public List<string> Buffs { get; set; } = new();
     }
 }
