@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Text.Json;
 using Core.Entities;
+using Core.Entities.Buffs;
 using Core.Entities.Units;
 using Core.Interfaces;
 using Core.Formations;
@@ -186,9 +187,10 @@ namespace Services.Storage
 
         private UnitSnapshot MapUnit(IUnit unit)
         {
+            var baseUnit = GetBaseUnit(unit);
             var snapshot = new UnitSnapshot
             {
-                UnitType = GetUnitType(unit),
+                UnitType = GetUnitType(baseUnit),
                 Name = unit.Name,
                 Attack = unit.Attack,
                 Defence = unit.Defence,
@@ -197,22 +199,30 @@ namespace Services.Storage
                 Cost = unit.Cost
             };
 
-            if (unit is Archer archer)
+            if (baseUnit is Archer archer)
             {
                 snapshot.Range = archer.Range;
             }
-            else if (unit is Healer healer)
+            else if (baseUnit is Healer healer)
             {
                 snapshot.HealRange = healer.HealRange;
                 snapshot.HealPower = healer.HealPower;
             }
-            else if (unit is Wizard wizard)
+            else if (baseUnit is Wizard wizard)
             {
                 snapshot.SpellRange = wizard.SpellRange;
                 snapshot.ClonePower = wizard.ClonePower;
             }
 
             return snapshot;
+        }
+
+        private IUnit GetBaseUnit(IUnit unit)
+        {
+            while (unit is UnitDecorator decorator)
+                unit = decorator.GetInnerUnit();
+
+            return unit;
         }
 
         private string GetUnitType(IUnit unit)

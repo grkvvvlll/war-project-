@@ -2,6 +2,8 @@
 using Core.Interfaces;
 using Core.Formations;
 using Services.Battle;
+using Services.Commands;
+using Services.Observers;
 using Services.Random;
 using Services.Storage;
 
@@ -21,11 +23,15 @@ namespace WpfPresentation.Engine
         private int _score2 = 0;
         private int _round = 0;
         private bool _army1Turn;
+        private readonly BattleStateSnapshotService _snapshotService;
+        private readonly BattleSave _initialSnapshot;
+        private List<BattleEvent> _lastEvents = new();
 
         public int Score1 => _score1;
         public int Score2 => _score2;
         public int Round => _round;
         public bool IsOver => !HasAlive(_army1) || !HasAlive(_army2);
+        public CommandHistory History { get; } = new();
 
         // Exposing state for save/load
         public IArmy Army1 => _army1;
@@ -47,6 +53,9 @@ namespace WpfPresentation.Engine
             _specialAbilityService = new SpecialAbilityService(_logger, formation);
 
             _army1Turn = _random.Next(0, 2) == 0;
+            _snapshotService = new BattleStateSnapshotService(_random);
+            _initialSnapshot = CaptureSnapshot("Начальное состояние");
+            AttachDeathObserver();
         }
 
         // Resume from a saved game
@@ -67,6 +76,9 @@ namespace WpfPresentation.Engine
             _army1Turn = resume.Army1Turn;
             _score1 = resume.ScoreArmy1;
             _score2 = resume.ScoreArmy2;
+            _snapshotService = new BattleStateSnapshotService(_random);
+            _initialSnapshot = CaptureSnapshot("Начальное состояние");
+            AttachDeathObserver();
         }
 
         public void SetFormation(IBattleFormation formation)
@@ -130,6 +142,157 @@ namespace WpfPresentation.Engine
             }
 
             return _logger.Events.ToList();
+        }
+
+        public List<BattleEvent> ExecuteRoundCommand()
+        {
+            _lastEvents = new List<BattleEvent>();
+            var before = CaptureSnapshot($"Перед ходом {_round + 1}");
+            BattleSave? after = null;
+
+            var command = new ActionGameCommand(
+                $"Ход {_round + 1}",
+                execute: () =>
+                {
+                    if (after != null)
+                    {
+                        ApplySnapshot(after);
+                        _lastEvents = new List<BattleEvent>();
+                        return;
+                    }
+
+                    _lastEvents = ExecuteRound();
+                    after = CaptureSnapshot($"После хода {_round}");
+                },
+                undo: () => ApplySnapshot(before));
+
+            History.Execute(command);
+            return _lastEvents.ToList();
+        }
+
+        public void ChangeFormationCommand(IBattleFormation formation)
+        {
+            var before = CaptureSnapshot("Перед сменой построения");
+            BattleSave? after = null;
+
+            History.Execute(new ActionGameCommand(
+                $"Построение: {GetFormationName(formation)}",
+                execute: () =>
+                {
+                    if (after != null)
+                    {
+                        ApplySnapshot(after);
+                        return;
+                    }
+
+                    ChangeFormation(formation);
+                    after = CaptureSnapshot("После смены построения");
+                },
+                undo: () => ApplySnapshot(before)));
+        }
+
+        public void UndoCommand() => History.Undo();
+
+        public void RedoCommand() => History.Redo();
+
+        public void ResetToInitialStateCommand()
+        {
+            ApplySnapshot(_initialSnapshot);
+            History.Clear();
+        }
+
+        private BattleSave CaptureSnapshot(string description)
+        {
+            return _snapshotService.Capture(
+                _army1,
+                _army2,
+                _round,
+                _army1Turn,
+                _score1,
+                _score2,
+                _formation,
+                Array.Empty<string>(),
+                description);
+        }
+
+        private void ApplySnapshot(BattleSave snapshot)
+        {
+            DetachDeathObserver();
+            var restored = _snapshotService.Restore(snapshot);
+            _army1 = restored.Army1;
+            _army2 = restored.Army2;
+            _round = restored.Turns;
+            _army1Turn = restored.Army1Turn;
+            _score1 = restored.ScoreArmy1;
+            _score2 = restored.ScoreArmy2;
+            SetFormation(restored.Formation);
+            _logger.SetArmies(_army1, _army2);
+            AttachDeathObserver();
+        }
+
+        private static string GetFormationName(IBattleFormation formation)
+        {
+            return formation switch
+            {
+                WideBridgeFormation => "широкий мост",
+                WallFormation => "стенка на стенку",
+                _ => "мост"
+            };
+        }
+
+        private void ChangeFormation(IBattleFormation formation)
+        {
+            bool wasWall = _formation is WallFormation;
+            bool isWall = formation is WallFormation;
+
+            SetFormation(formation);
+
+            if (wasWall != isWall && _army1 is Army army)
+                army.ReverseUnits();
+
+            RenumberArmy(_army1, isArmy1: true);
+            RenumberArmy(_army2, isArmy1: false);
+        }
+
+        private void RenumberArmy(IArmy army, bool isArmy1)
+        {
+            var alive = army.Units.Where(u => u.IsAlive).ToList();
+            bool isWall = _formation is WallFormation;
+
+            if (isArmy1 && !isWall)
+            {
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    var unit = alive[alive.Count - 1 - i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
+                }
+            }
+            else
+            {
+                for (int i = 0; i < alive.Count; i++)
+                {
+                    var unit = alive[i];
+                    var unitType = unit.Name.Split(' ')[0];
+                    unit.Name = $"{unitType} {i + 1}";
+                }
+            }
+        }
+
+        private void AttachDeathObserver()
+        {
+            foreach (var unit in _army1.Units)
+                ObserverRegistry.DeathObserver.Subscribe(unit);
+            foreach (var unit in _army2.Units)
+                ObserverRegistry.DeathObserver.Subscribe(unit);
+        }
+
+        private void DetachDeathObserver()
+        {
+            foreach (var unit in _army1.Units)
+                ObserverRegistry.DeathObserver.Unsubscribe(unit);
+            foreach (var unit in _army2.Units)
+                ObserverRegistry.DeathObserver.Unsubscribe(unit);
         }
 
         private bool HasAlive(IArmy army) => army.Units.Any(u => u.IsAlive);

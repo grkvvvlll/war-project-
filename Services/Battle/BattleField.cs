@@ -3,6 +3,9 @@ using Core.Entities.Buffs;
 using Core.Entities.Units;
 using Core.Interfaces;
 using Services.Storage;
+using Services.Commands;
+using Services.Observers;
+using Services.Logging;
 using Core.Formations;
 
 namespace Services.Battle
@@ -69,37 +72,83 @@ namespace Services.Battle
             _previousAliveCount2 = GetAliveCount(army2);
 
             bool currentArmy1Turn = army1Turn ?? (_random.Next(0, 2) == 0);
+            var history = new CommandHistory();
+            var snapshotService = new BattleStateSnapshotService(_random);
+            var initialSnapshot = CaptureSnapshot("Начальное состояние");
 
-            if (turns == 0)
+            BattleSave CaptureSnapshot(string description)
             {
-                _logger.LogInfo($"Первой атакует: {(currentArmy1Turn ? army1.Name : army2.Name)}");
+                var logLines = _logger is IRecordingBattleLogger rec
+                    ? rec.Lines
+                    : Enumerable.Empty<string>();
+
+                return snapshotService.Capture(
+                    army1,
+                    army2,
+                    turns,
+                    currentArmy1Turn,
+                    _scoreArmy1,
+                    _scoreArmy2,
+                    _formation,
+                    logLines,
+                    description);
             }
-            else
-            {
-                _logger.LogInfo($"Бой продолжен с {turns + 1}-го раунда.");
-                _logger.LogInfo($"Следующей атакует: {(currentArmy1Turn ? army1.Name : army2.Name)}");
-                _logger.LogInfo($"Текущий счёт: {_scoreArmy1} : {_scoreArmy2}");
-            }
 
-            if (!_autoMode && showRoundMenuBeforeFirstRound)
+            void ApplySnapshot(BattleSave snapshot)
             {
-                if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
-                    return new BattleResult(
-                        _exitWithoutSave ? StoppedWithoutSaveResult : SavedAndStoppedResult,
-                        turns);
-            }
+                ObserverRegistry.Detach(army1);
+                ObserverRegistry.Detach(army2);
 
-            while (HasAlive(army1) && HasAlive(army2))
-            {
-                BattleVisualizer.PrintArmyLine(army1, army2, _formation);
-                Console.WriteLine();
+                var restored = snapshotService.Restore(snapshot);
+                army1 = restored.Army1;
+                army2 = restored.Army2;
+                turns = restored.Turns;
+                currentArmy1Turn = restored.Army1Turn;
+                _scoreArmy1 = restored.ScoreArmy1;
+                _scoreArmy2 = restored.ScoreArmy2;
+                SetFormation(restored.Formation);
 
-                // проверяем, остались ли только Гуляй-города
-                if (IsOnlyGulyayGorodVsGulyayGorod(army1, army2))
+                if (_logger is RecordingBattleLogger rec)
                 {
-                    _logger.LogInfo("Остались только крепости с обеих сторон!");
+                    rec.Clear();
+                    foreach (var line in snapshot.LogLines)
+                        rec.Lines.Add(line);
                 }
 
+                ObserverRegistry.Attach(army1);
+                ObserverRegistry.Attach(army2);
+            }
+
+            void ResetToInitialState()
+            {
+                ApplySnapshot(initialSnapshot);
+                history.Clear();
+                _logger.LogInfo("Бой возвращён к начальному состоянию.");
+            }
+
+            void ExecuteFormationCommand()
+            {
+                var before = CaptureSnapshot("Перед изменением построения");
+                BattleSave? after = null;
+
+                history.Execute(new ActionGameCommand(
+                    "Изменение построения",
+                    execute: () =>
+                    {
+                        if (after != null)
+                        {
+                            ApplySnapshot(after);
+                            return;
+                        }
+
+                        ChangeFormation(army1, army2);
+                        after = CaptureSnapshot("После изменения построения");
+                    },
+                    undo: () => ApplySnapshot(before)));
+            }
+
+            void ExecuteCurrentRound()
+            {
                 if (currentArmy1Turn)
                 {
                     _scoreArmy1 += _meleeService.Execute(army1, army2, true);
@@ -128,6 +177,66 @@ namespace Services.Battle
                 RenumberArmy(army1, isArmy1: true);
                 RenumberArmy(army2, isArmy1: false);
                 turns++;
+
+                currentArmy1Turn = !currentArmy1Turn;
+            }
+
+            if (turns == 0)
+            {
+                _logger.LogInfo($"Первой атакует: {(currentArmy1Turn ? army1.Name : army2.Name)}");
+            }
+            else
+            {
+                _logger.LogInfo($"Бой продолжен с {turns + 1}-го раунда.");
+                _logger.LogInfo($"Следующей атакует: {(currentArmy1Turn ? army1.Name : army2.Name)}");
+                _logger.LogInfo($"Текущий счёт: {_scoreArmy1} : {_scoreArmy2}");
+            }
+
+            if (!_autoMode && showRoundMenuBeforeFirstRound)
+            {
+                if (!WaitForRoundAction(
+                    ref army1,
+                    ref army2,
+                    ref turns,
+                    ref currentArmy1Turn,
+                    history,
+                    ApplySnapshot,
+                    ResetToInitialState,
+                    ExecuteFormationCommand))
+                    return new BattleResult(
+                        _exitWithoutSave ? StoppedWithoutSaveResult : SavedAndStoppedResult,
+                        turns);
+            }
+
+            while (HasAlive(army1) && HasAlive(army2))
+            {
+                BattleVisualizer.PrintArmyLine(army1, army2, _formation);
+                Console.WriteLine();
+
+                // проверяем, остались ли только Гуляй-города
+                if (IsOnlyGulyayGorodVsGulyayGorod(army1, army2))
+                {
+                    _logger.LogInfo("Остались только крепости с обеих сторон!");
+                }
+
+                var before = CaptureSnapshot($"Перед ходом {turns + 1}");
+                BattleSave? after = null;
+                var roundNumber = turns + 1;
+
+                history.Execute(new ActionGameCommand(
+                    $"Ход {roundNumber}",
+                    execute: () =>
+                    {
+                        if (after != null)
+                        {
+                            ApplySnapshot(after);
+                            return;
+                        }
+
+                        ExecuteCurrentRound();
+                        after = CaptureSnapshot($"После хода {turns}");
+                    },
+                    undo: () => ApplySnapshot(before)));
 
                 // проверяем изменения состояния
                 int currentTotalHp1 = GetTotalHealth(army1);
@@ -161,11 +270,17 @@ namespace Services.Battle
                 _previousAliveCount1 = currentAliveCount1;
                 _previousAliveCount2 = currentAliveCount2;
 
-                currentArmy1Turn = !currentArmy1Turn;
-
                 if (!_autoMode && HasAlive(army1) && HasAlive(army2))
                 {
-                    if (!WaitForRoundAction(army1, army2, turns, currentArmy1Turn))
+                    if (!WaitForRoundAction(
+                        ref army1,
+                        ref army2,
+                        ref turns,
+                        ref currentArmy1Turn,
+                        history,
+                        ApplySnapshot,
+                        ResetToInitialState,
+                        ExecuteFormationCommand))
                         return new BattleResult(
                             _exitWithoutSave ? StoppedWithoutSaveResult : SavedAndStoppedResult,
                             turns);
@@ -206,7 +321,15 @@ namespace Services.Battle
             return army.Units.Any(u => u.IsAlive);
         }
 
-        private bool WaitForRoundAction(IArmy army1, IArmy army2, int turns, bool army1Turn)
+        private bool WaitForRoundAction(
+            ref IArmy army1,
+            ref IArmy army2,
+            ref int turns,
+            ref bool army1Turn,
+            CommandHistory history,
+            Action<BattleSave> applySnapshot,
+            Action resetToInitialState,
+            Action changeFormationCommand)
         {
             while (true)
             {
@@ -219,6 +342,10 @@ namespace Services.Battle
                 Console.WriteLine("3 - проиграть до конца");
                 Console.WriteLine("4 - выйти в меню без сохранения");
                 Console.WriteLine("5 - изменить построение армий");
+                Console.WriteLine("6 - Undo");
+                Console.WriteLine("7 - Redo");
+                Console.WriteLine("8 - сброс в исходное состояние");
+                Console.WriteLine("9 - показать историю действий");
                 Console.Write("Ваш выбор: ");
                 string input = (Console.ReadLine() ?? "").Trim();
                 if (string.IsNullOrEmpty(input))
@@ -245,11 +372,52 @@ namespace Services.Battle
                 }
                 if (input == "5")
                 {
-                    ChangeFormation(army1, army2);
+                    changeFormationCommand();
+                    continue;
+                }
+                if (input == "6")
+                {
+                    if (!history.CanUndo)
+                        Console.WriteLine("Undo недоступен.");
+                    else
+                        history.Undo();
+                    continue;
+                }
+                if (input == "7")
+                {
+                    if (!history.CanRedo)
+                        Console.WriteLine("Redo недоступен.");
+                    else
+                        history.Redo();
+                    continue;
+                }
+                if (input == "8")
+                {
+                    resetToInitialState();
+                    continue;
+                }
+                if (input == "9")
+                {
+                    PrintHistory(history);
                     continue;
                 }
                 Console.WriteLine("Неизвестная команда.");
             }
+        }
+
+        private void PrintHistory(CommandHistory history)
+        {
+            Console.WriteLine();
+            Console.WriteLine("История действий:");
+
+            if (history.Entries.Count == 0)
+            {
+                Console.WriteLine("  История пуста.");
+                return;
+            }
+
+            for (int i = 0; i < history.Entries.Count; i++)
+                Console.WriteLine($"  {i + 1}. {history.Entries[i]}");
         }
 
         private void SaveBattle(IArmy army1, IArmy army2, int turns, bool army1Turn)

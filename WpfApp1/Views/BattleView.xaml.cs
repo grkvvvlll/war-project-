@@ -15,6 +15,11 @@ namespace WpfPresentation.Views
     public partial class BattleView : UserControl
     {
         public event Action? NextRoundRequested;
+        public event Action? UndoRequested;
+        public event Action? RedoRequested;
+        public event Action? ResetRequested;
+        public event Action? ArmyCompositionRequested;
+        public event Action? AutoModeRequested;
         public event Action? ExitRequested;
         public event Action<IBattleFormation>? FormationChangeRequested;
 
@@ -53,6 +58,9 @@ namespace WpfPresentation.Views
         private void SetupButtons()
         {
             NextRoundButton.Click += (_, _) => NextRoundRequested?.Invoke();
+            UndoButton.Click += (_, _) => UndoRequested?.Invoke();
+            RedoButton.Click += (_, _) => RedoRequested?.Invoke();
+            ResetButton.Click += (_, _) => ResetRequested?.Invoke();
             ExitButton.Click += (_, _) => ExitRequested?.Invoke();
 
             ChangeFormationButton.Click += (_, _) =>
@@ -66,8 +74,8 @@ namespace WpfPresentation.Views
             Formation2Button.Click += (_, _) => { FormationPanel.Visibility = Visibility.Collapsed; FormationChangeRequested?.Invoke(new WideBridgeFormation()); };
             Formation3Button.Click += (_, _) => { FormationPanel.Visibility = Visibility.Collapsed; FormationChangeRequested?.Invoke(new WallFormation()); };
 
-            AutoModeButton.Click += (_, _) => { /* TODO */ };
-            ArmyCompositionButton.Click += (_, _) => { /* TODO */ };
+            AutoModeButton.Click += (_, _) => AutoModeRequested?.Invoke();
+            ArmyCompositionButton.Click += (_, _) => ArmyCompositionRequested?.Invoke();
         }
 
         // ── Отрисовка поля боя ────────────────────────────────────────────────
@@ -209,6 +217,29 @@ namespace WpfPresentation.Views
         {
             _formation = formation;
             DrawBattlefield();
+        }
+
+        public void UpdateState(IArmy army1, IArmy army2, IBattleFormation formation, int score1, int score2, int round)
+        {
+            _army1 = army1;
+            _army2 = army2;
+            _formation = formation;
+            Army1NameText.Text = army1.Name;
+            Army2NameText.Text = army2.Name;
+            UpdateScore(score1, score2);
+            UpdateRound(round + 1);
+            DrawBattlefield();
+        }
+
+        public void UpdateHistory(IEnumerable<string> entries, bool canUndo, bool canRedo)
+        {
+            HistoryList.ItemsSource = null;
+            HistoryList.ItemsSource = entries.ToList();
+            if (HistoryList.Items.Count > 0)
+                HistoryList.ScrollIntoView(HistoryList.Items[HistoryList.Items.Count - 1]);
+
+            UndoButton.IsEnabled = canUndo;
+            RedoButton.IsEnabled = canRedo;
         }
 
         // ── Анимации ──────────────────────────────────────────────────────────

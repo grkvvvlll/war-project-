@@ -117,6 +117,18 @@
                         Foreground="#FAC775" BorderBrush="#888780"
                         Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
 
+                <Button x:Name="UndoButton" Content="Undo"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="RedoButton" Content="Redo"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="ResetButton" Content="Сброс в исходное состояние"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
                 <Button x:Name="ArmyCompositionButton" Content="Состав армий"
                         Foreground="#D3D1C7" BorderBrush="#5F5E5A"
                         Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
@@ -148,6 +160,22 @@
                     <Button x:Name="CancelFormationButton" Content="Отмена"
                             Foreground="#888780" BorderBrush="#444441"
                             Style="{StaticResource ActionButtonStyle}"/>
+                </StackPanel>
+            </Border>
+
+            <Border Grid.Row="1"
+                    BorderBrush="#444441" BorderThickness="1"
+                    Padding="10"
+                    VerticalAlignment="Bottom" Margin="0,0,0,12">
+                <StackPanel>
+                    <TextBlock Text="ИСТОРИЯ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,8"/>
+                    <ListBox x:Name="HistoryList"
+                             Height="150"
+                             Background="#1E1E1C"
+                             BorderBrush="#3A3A38"
+                             Foreground="#D3D1C7"
+                             FontFamily="Georgia"
+                             FontSize="12"/>
                 </StackPanel>
             </Border>
 

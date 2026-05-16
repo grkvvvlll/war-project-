@@ -1,4 +1,5 @@
 ﻿using System.Windows;
+using System.Text;
 using Core.Formations;
 using Core.Interfaces;
 using WpfPresentation.Engine;
@@ -96,14 +97,19 @@ namespace WpfPresentation
             _engine = new WpfBattleEngine(_army1!, _army2!, _selectedFormation!);
             _battleView = new BattleView(_army1!, _army2!, _selectedFormation!);
             _battleView.NextRoundRequested += OnNextRound;
+            _battleView.UndoRequested += OnUndo;
+            _battleView.RedoRequested += OnRedo;
+            _battleView.ResetRequested += OnReset;
+            _battleView.ArmyCompositionRequested += ShowArmyComposition;
+            _battleView.AutoModeRequested += OnAutoMode;
             _battleView.ExitRequested += ShowMainMenu;
             _battleView.FormationChangeRequested += (formation) =>
             {
-                _selectedFormation = formation;
-                _engine.SetFormation(formation);
-                _battleView.UpdateFormation(formation);
+                _engine.ChangeFormationCommand(formation);
+                SyncBattleView();
             };
             MainContent.Content = _battleView;
+            SyncBattleView();
         }
 
         private async void OnNextRound()
@@ -113,7 +119,7 @@ namespace WpfPresentation
             _battleView.ClearLog();
             _battleView.NextRoundButton.IsEnabled = false;
 
-            var events = _engine.ExecuteRound();
+            var events = _engine.ExecuteRoundCommand();
 
             foreach (var e in events)
             {
@@ -181,6 +187,111 @@ namespace WpfPresentation
 
             _battleView.DrawBattlefield();
             _battleView.NextRoundButton.IsEnabled = true;
+            SyncBattleView();
+        }
+
+        private void OnUndo()
+        {
+            if (_engine == null || _battleView == null) return;
+            _engine.UndoCommand();
+            SyncBattleView();
+        }
+
+        private void OnRedo()
+        {
+            if (_engine == null || _battleView == null) return;
+            _engine.RedoCommand();
+            SyncBattleView();
+        }
+
+        private void OnReset()
+        {
+            if (_engine == null || _battleView == null) return;
+            _engine.ResetToInitialStateCommand();
+            _battleView.ClearLog();
+            SyncBattleView();
+        }
+
+        private async void OnAutoMode()
+        {
+            if (_engine == null || _battleView == null) return;
+
+            SetBattleButtonsEnabled(false);
+            _battleView.ClearLog();
+
+            while (!_engine.IsOver)
+            {
+                var events = _engine.ExecuteRoundCommand();
+                foreach (var e in events)
+                    _battleView.LogEvent(e);
+
+                SyncBattleView();
+                SetBattleButtonsEnabled(false);
+
+                var end = events.FirstOrDefault(e => e.Type == BattleEventType.BattleEnd);
+                if (end != null)
+                {
+                    MessageBox.Show($"Победитель: {end.Winner}\nСчёт: {end.Score1} : {end.Score2}");
+                    break;
+                }
+
+                await Task.Delay(250);
+            }
+
+            SetBattleButtonsEnabled(true);
+            SyncBattleView();
+        }
+
+        private void ShowArmyComposition()
+        {
+            if (_engine == null) return;
+
+            var text = new StringBuilder();
+            AppendArmy(text, _engine.Army1);
+            text.AppendLine();
+            AppendArmy(text, _engine.Army2);
+            MessageBox.Show(text.ToString(), "Состав армий");
+        }
+
+        private static void AppendArmy(StringBuilder text, IArmy army)
+        {
+            text.AppendLine(army.Name);
+            foreach (var unit in army.Units)
+                text.AppendLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
+        }
+
+        private void SetBattleButtonsEnabled(bool isEnabled)
+        {
+            if (_battleView == null) return;
+
+            _battleView.NextRoundButton.IsEnabled = isEnabled;
+            _battleView.UndoButton.IsEnabled = isEnabled && (_engine?.History.CanUndo ?? false);
+            _battleView.RedoButton.IsEnabled = isEnabled && (_engine?.History.CanRedo ?? false);
+            _battleView.AutoModeButton.IsEnabled = isEnabled;
+            _battleView.ArmyCompositionButton.IsEnabled = isEnabled;
+            _battleView.ChangeFormationButton.IsEnabled = isEnabled;
+            _battleView.ResetButton.IsEnabled = isEnabled;
+            _battleView.ExitButton.IsEnabled = isEnabled;
+        }
+
+        private void SyncBattleView()
+        {
+            if (_engine == null || _battleView == null) return;
+
+            _army1 = _engine.Army1;
+            _army2 = _engine.Army2;
+            _selectedFormation = _engine.Formation;
+            _battleView.UpdateState(
+                _engine.Army1,
+                _engine.Army2,
+                _engine.Formation,
+                _engine.Score1,
+                _engine.Score2,
+                _engine.Round);
+            _battleView.UpdateHistory(
+                _engine.History.Entries,
+                _engine.History.CanUndo,
+                _engine.History.CanRedo);
         }
 
         private void ShowLoadGame()
