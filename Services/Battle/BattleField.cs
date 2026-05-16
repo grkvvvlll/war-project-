@@ -315,7 +315,7 @@ namespace Services.Battle
                     Console.WriteLine($"потерял бафф {buffName}!");
 
                     // Снимаем декоратор: заменяем его в армии на "голый" юнит внутри
-                    ((Army)army).SetUnit(i, decorator.GetInnerUnit());
+                    ((Core.Entities.Army)army).SetUnit(i, decorator.GetInnerUnit());
                 }
             }
         }
@@ -347,7 +347,7 @@ namespace Services.Battle
             bool wasWall = previousFormation is WallFormation;
             bool isWall = _formation is WallFormation;
             if (wasWall != isWall)
-                ((Army)army1).ReverseUnits();
+                ((Core.Entities.Army)army1).ReverseUnits();
 
             RenumberArmy(army1, isArmy1: true);
             RenumberArmy(army2, isArmy1: false);

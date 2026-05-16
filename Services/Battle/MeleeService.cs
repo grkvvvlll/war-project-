@@ -56,7 +56,7 @@ namespace Services.Battle
                     Console.Write($"{unitName} ");
                     Console.ResetColor();
                     Console.WriteLine($"💥 потерял бафф {buffName}!");
-                    ((Army)defenderArmy).SetUnit(dIdx, dec.GetInnerUnit());
+                    ((Core.Entities.Army)defenderArmy).SetUnit(dIdx, dec.GetInnerUnit());
                 }
 
                 if (!defender.IsAlive)

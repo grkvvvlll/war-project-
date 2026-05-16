@@ -233,7 +233,7 @@ namespace Services.Storage
                 .Select(unit => RestoreUnit(unit, random))
                 .ToList();
 
-            return new Army(snapshot.Name, units);
+            return new Core.Entities.Army(snapshot.Name, units);
         }
 
         private IUnit RestoreUnit(UnitSnapshot dto, IRandomService random)

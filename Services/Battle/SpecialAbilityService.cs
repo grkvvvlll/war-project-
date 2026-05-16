@@ -211,8 +211,7 @@ namespace Services.Battle
 
             if (squireAbility.LastAppliedUnit == null) return;
 
-            ((Army)army).SetUnit(targetIndex, squireAbility.LastAppliedUnit);
-
+            ((Core.Entities.Army)army).SetUnit(targetIndex, squireAbility.LastAppliedUnit);
             string buffName = "Бафф";
             int atkDelta = 0, defDelta = 0;
 

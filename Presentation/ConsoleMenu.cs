@@ -5,66 +5,55 @@ using Core.Factories.Armies;
 using Core.Factories.Units;
 using Core.Formations;
 using Core.Interfaces;
-using Microsoft.VisualBasic;
-using System.Runtime.InteropServices;
 using Services.Battle;
 using Services.Logging;
 using Services.Random;
 using Services.Storage;
 using Services.Observers;
+using Services.ArmyBuilding;
+using Services.Formation;
+using Services.UI;
 
 namespace Presentation
 {
     public class ConsoleMenu
     {
-        private const int StdOutputHandle = -11;
-        private const int EnableVirtualTerminalProcessing = 0x0004;
-        private const int MinScrollableBufferHeight = 1000;
-
-        private static bool _virtualTerminalModeChecked;
-        private static bool _alternateScreenEnabled;
-
         private readonly IRandomService _random;
         private readonly IBattleLogger _logger;
         private readonly IDamageCalculator _damageCalculator;
         private readonly IBattleField _battleField;
-
-        // factory метод для создания юнитов
-        private readonly Dictionary<string, UnitCreator> _unitCreators;
-        private readonly AutoArmyFactory _autoFactory;
-        private readonly ManualArmyFactory _manualFactory;
+        private readonly UnitCreatorFactory _unitCreatorFactory;
+        private readonly ArmyBuilder _armyBuilder;
+        private readonly FormationSelector _formationSelector;
+        private readonly LogCleaner _logCleaner;
+        private readonly ArmyPrinter _armyPrinter;
 
         public ConsoleMenu(
             IRandomService random,
             IBattleLogger logger,
             IDamageCalculator damageCalculator,
-            IBattleField battleField)
+            IBattleField battleField,
+            ArmyBuilder armyBuilder,
+            FormationSelector formationSelector,
+            LogCleaner logCleaner,
+            ArmyPrinter armyPrinter)
         {
             _random = random;
             _logger = logger;
             _damageCalculator = damageCalculator;
             _battleField = battleField;
-
-            // ИНИЦИАЛИЗАЦИЯ FACTORY METHOD 
-            _unitCreators = new Dictionary<string, UnitCreator>
-            {
-                { "Heavy", new HeavyUnitCreator() },
-                { "Light", new LightUnitCreator(random) },
-                { "Archer", new ArcherUnitCreator() },
-                { "Healer", new HealerUnitCreator() },
-                { "Wizard", new WizardUnitCreator(random) },
-                { "GulyayGorod", new GulyayGorodCreator() }
-            };
-
-            _autoFactory = new AutoArmyFactory(_unitCreators);
-            _manualFactory = new ManualArmyFactory(_unitCreators);
+            _armyBuilder = armyBuilder;
+            _formationSelector = formationSelector;
+            _logCleaner = logCleaner;
+            _armyPrinter = armyPrinter;
+            _unitCreatorFactory = new UnitCreatorFactory(random);
         }
 
         public void Run()
         {
             while (true)
             {
-                ClearConsole();
+                Console.Clear();
                 Console.WriteLine("1. Новая игра");
                 Console.WriteLine("2. Помощь");
                 Console.WriteLine("3. Загрузить игру");
@@ -95,11 +84,12 @@ namespace Presentation
                 }
             }
         }
+
         private void ShowObserverSettings()
         {
             while (true)
             {
-                ClearConsole();
+                Console.Clear();
                 Console.WriteLine("=== Настройки наблюдателей ===");
                 Console.WriteLine($"1. Звук при смерти юнита: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
                 Console.WriteLine($"2. Файловый лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
@@ -128,70 +118,35 @@ namespace Presentation
                 }
             }
         }
-        private void ClearLogFile()
-        {
-            string logPath = Path.Combine(
-                AppContext.BaseDirectory,
-                "logs",
-                "damage-log.txt");
-
-            if (File.Exists(logPath))
-            {
-                File.WriteAllText(logPath, string.Empty);
-            }
-        }
 
         private void StartNewGame()
         {
-            ClearLogFile();
-            ClearConsole();
-            if (_logger is RecordingBattleLogger rec)
-                rec.Clear();
+            _logCleaner.Clear();
+            Console.Clear();
 
             Console.Write("Введите бюджет для армий: ");
             int budget = ReadInt();
             Console.WriteLine();
 
-            Console.WriteLine("Выберите способ построения:");
-            IBattleFormation formation;
-            while (true)
-            {
-                Console.WriteLine("1. Бой на мосту");
-                Console.WriteLine("2. Бой на широком мосту");
-                Console.WriteLine("3. Стенка на стенку");
-                Console.Write("Выберите построение (1-3): ");
-                var input = Console.ReadLine()?.Trim();
-                if (input == "1") { formation = new BridgeFormation(); break; }
-                else if (input == "2") { formation = new WideBridgeFormation(); break; }
-                else if (input == "3") { formation = new WallFormation(); break; }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1, 2 или 3.");
-                    Console.ResetColor();
-                    Console.WriteLine();
-                }
-            }
+            var formation = _formationSelector.Select();
             if (_battleField is BattleField bf) bf.SetFormation(formation);
 
-            // === 2. АРМИЯ 1 ===
-            var army1 = CreateArmyWithChoice("Армия 1", budget);
+            var army1 = _armyBuilder.Build("Армия 1", budget, ChooseCreationType("Армия 1"));
             RenumberUnitsFromFront(army1, isArmy1: true);
 
-            // === 3. АРМИЯ 2 ===
-            var army2 = CreateArmyWithChoice("Армия 2", budget);
+            var army2 = _armyBuilder.Build("Армия 2", budget, ChooseCreationType("Армия 2"));
             RenumberUnitsFromFront(army2, isArmy1: false);
             ObserverRegistry.Attach(army1);
             ObserverRegistry.Attach(army2);
 
             try
             {
-                ClearConsole();
+                Console.Clear();
                 Console.WriteLine("Армии сформированы:");
                 Console.WriteLine();
-                PrintArmyComposition(army1);
+                _armyPrinter.Print(army1);
                 Console.WriteLine();
-                PrintArmyComposition(army2);
+                _armyPrinter.Print(army2);
                 Console.WriteLine();
                 Console.WriteLine("Нажмите Enter для начала боя...");
                 Console.ReadLine();
@@ -231,7 +186,7 @@ namespace Presentation
             }
         }
 
-        private IArmy CreateArmyWithChoice(string armyName, int budget)
+        private bool ChooseCreationType(string armyName)
         {
             while (true)
             {
@@ -243,125 +198,21 @@ namespace Presentation
                 var choice = Console.ReadLine()?.Trim();
 
                 if (choice == "1")
-                {
-                    return _autoFactory.CreateArmy(armyName, budget);
-                }
-                else if (choice == "2")
-                {
-                    var unitChoices = GetManualUnitChoices(armyName, budget);
-                    return _manualFactory.CreateArmy(armyName, budget, unitChoices);
-                }
-                else
-                {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
-                    Console.ResetColor();
-                    Console.WriteLine();
-                }
-            }
-        }
+                    return true;
+                if (choice == "2")
+                    return false;
 
-        private List<string> GetManualUnitChoices(string armyName, int budget)
-        {
-            var choices = new List<string>();
-            int spentBudget = 0;
-            int minCost = _manualFactory.GetMinUnitCost();
-
-            Console.WriteLine($"\n=== {armyName} (Бюджет: {budget} монет) ===");
-
-            while (spentBudget + minCost <= budget)
-            {
-                int remaining = budget - spentBudget;
-                Console.WriteLine($"\nОсталось: {remaining} монет");
-                Console.WriteLine("Выберите юнита:");
-                Console.WriteLine($"1. Heavy ({_manualFactory.GetUnitCost("Heavy")} монет)");
-                Console.WriteLine($"2. Light ({_manualFactory.GetUnitCost("Light")} монет)");
-                Console.WriteLine($"3. Archer ({_manualFactory.GetUnitCost("Archer")} монет)");
-                Console.WriteLine($"4. Healer ({_manualFactory.GetUnitCost("Healer")} монет)");
-                Console.WriteLine($"5. Wizard ({_manualFactory.GetUnitCost("Wizard")} монет)");
-                Console.WriteLine($"6. GulyayGorod ({_manualFactory.GetUnitCost("GulyayGorod")} монет)");
-                Console.WriteLine("0. Закончить формирование");
-                Console.Write("Ваш выбор: ");
-                var input = Console.ReadLine();
-
-                if (input == "0")
-                    break;
-
-                var unitType = input switch
-                {
-                    "1" => "Heavy",
-                    "2" => "Light",
-                    "3" => "Archer",
-                    "4" => "Healer",
-                    "5" => "Wizard",
-                    "6" => "GulyayGorod",
-                    _ => null
-                };
-
-                if (unitType == null)
-                {
-                    Console.WriteLine("  Неверный выбор");
-                    continue;
-                }
-
-                int cost = _manualFactory.GetUnitCost(unitType);
-                if (cost > remaining)
-                {
-                    Console.WriteLine("  Недостаточно средств");
-                    continue;
-                }
-
-                choices.Add(unitType);
-                spentBudget += cost;
-                Console.WriteLine($"  Добавлен {unitType} (-{cost} монет)");
-            }
-
-            if (choices.Count == 0)
-            {
-                Console.WriteLine("  Армия пуста, добавлен юнит по умолчанию");
-                choices.Add("Light");
-            }
-
-            return choices;
-        }
-
-        private void PrintArmyComposition(IArmy army)
-        {
-            Console.WriteLine($"=== {army.Name} (Бюджет: {army.TotalCost} монет) ===");
-
-            var heavyCount = army.Units.Count(u => GetBaseType(u) == typeof(HeavyUnit));
-            var lightCount = army.Units.Count(u => GetBaseType(u) == typeof(LightUnit));
-            var archerCount = army.Units.Count(u => GetBaseType(u) == typeof(Archer));
-            var healerCount = army.Units.Count(u => GetBaseType(u) == typeof(Healer));
-            var wizardCount = army.Units.Count(u => GetBaseType(u) == typeof(Wizard));
-            var gulyayCount = army.Units.Count(u => GetBaseType(u) == typeof(GulyayGorodAdapter));
-
-            Console.WriteLine($"🛡️ Тяжёлых: {heavyCount} × {UnitFactory.HeavyCost} = {heavyCount * UnitFactory.HeavyCost} монет");
-            Console.WriteLine($"⚔️ Лёгких: {lightCount} × {UnitFactory.LightCost} = {lightCount * UnitFactory.LightCost} монет");
-            Console.WriteLine($"🏹 Лучников: {archerCount} × {UnitFactory.ArcherCost} = {archerCount * UnitFactory.ArcherCost} монет");
-            Console.WriteLine($"💚 Целителей: {healerCount} × {UnitFactory.HealerCost} = {healerCount * UnitFactory.HealerCost} монет");
-            Console.WriteLine($"🔮 Магов: {wizardCount} × {UnitFactory.WizardCost} = {wizardCount * UnitFactory.WizardCost} монет");
-            Console.WriteLine($"🏰 Гуляй-город: {gulyayCount} × {UnitFactory.GulyayGorodCost} = {gulyayCount * UnitFactory.GulyayGorodCost} монет");
-            Console.WriteLine($"─────────────────────────────────────────");
-            Console.WriteLine($"Всего юнитов: {army.Units.Count}");
-            Console.WriteLine($"Итого потрачено: {army.TotalCost} монет");
-            Console.WriteLine("\nСостав армии:");
-
-            foreach (var unit in army.Units)
-            {
-                string icon = GetUnitTypeIcon(unit);
-                Console.WriteLine($"  {icon} {unit.Name} (HP:{unit.Health} ATK:{unit.Attack} DEF:{unit.Defence})");
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
+                Console.ResetColor();
+                Console.WriteLine();
             }
         }
 
         private void ShowHelp()
         {
-            // Очистка лога и логгера перед показом помощи
-            ClearLogFile();
-            if (_logger is RecordingBattleLogger rec)
-                rec.Clear();
-
-            ClearConsole();
+            _logCleaner.Clear();
+            Console.Clear();
 
             var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
             var light = new LightUnitCreator(_random).CreateUnit("Light");
@@ -449,7 +300,7 @@ namespace Presentation
 
         private void LoadGame()
         {
-            ClearConsole();
+            Console.Clear();
 
             var saveService = BattleSaveService.Instance;
             var saves = saveService.ListSaves();
@@ -486,7 +337,7 @@ namespace Presentation
             var chosen = saves[n - 1];
             var save = saveService.Load(chosen.FileName);
 
-            ClearConsole();
+            Console.Clear();
             Console.WriteLine($"=== Загрузка: {chosen.FileName} ===");
             Console.WriteLine($"Сохранено (UTC): {save.SavedAtUtc:yyyy-MM-dd HH:mm:ss}");
             Console.WriteLine($"Ходов уже сыграно: {save.Turns}");
@@ -590,216 +441,6 @@ namespace Presentation
                     unit.Name = $"{unitType} {i + 1}";
                 }
             }
-        }
-
-        private string GetUnitTypeIcon(IUnit unit)
-        {
-            IUnit current = unit;
-            while (current is Core.Entities.Buffs.UnitDecorator decorator)
-            {
-                current = decorator.GetInnerUnit();
-            }
-
-            return current switch
-            {
-                HeavyUnit _ => "🛡️",
-                LightUnit _ => "⚔️",
-                Archer _ => "🏹",
-                Healer _ => "💚",
-                Wizard _ => "🔮",
-                GulyayGorodAdapter _ => "🏰",
-                _ => "❓"
-            };
-        }
-
-        private Type GetBaseType(IUnit unit)
-        {
-            IUnit current = unit;
-            while (current is Core.Entities.Buffs.UnitDecorator decorator)
-            {
-                current = decorator.GetInnerUnit();
-            }
-            return current.GetType();
-        }
-
-        private void ClearConsole()
-        {
-            if (Console.IsOutputRedirected)
-                return;
-
-            try
-            {
-                EnableAnsiClearSequences();
-                ResetMainConsoleScrollback();
-                Console.Write("\u001b[3J\u001b[2J\u001b[H");
-                Console.Out.Flush();
-            }
-            catch (IOException)
-            {
-                Console.WriteLine();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.WriteLine();
-            }
-
-            try
-            {
-                Console.Clear();
-                Console.SetCursorPosition(0, 0);
-            }
-            catch (IOException)
-            {
-                Console.WriteLine();
-            }
-        }
-
-        public static void RestoreConsoleScreen()
-        {
-            if (!_alternateScreenEnabled || Console.IsOutputRedirected)
-                return;
-
-            try
-            {
-                Console.Write("\u001b[?1049l");
-                Console.Out.Flush();
-            }
-            catch (IOException)
-            {
-            }
-            finally
-            {
-                _alternateScreenEnabled = false;
-            }
-        }
-
-        private static void ClearBattleConsole()
-        {
-            RestoreConsoleScreen();
-
-            if (Console.IsOutputRedirected)
-                return;
-
-            try
-            {
-                EnableAnsiClearSequences();
-                ResetMainConsoleScrollback();
-                Console.Write("\u001b[3J\u001b[2J\u001b[1;1H");
-                Console.Out.Flush();
-                Console.Clear();
-                MoveCursorToVisibleHome();
-                Console.Write("\u001b[1;1H");
-                Console.Out.Flush();
-            }
-            catch (IOException)
-            {
-                Console.WriteLine();
-            }
-            catch (UnauthorizedAccessException)
-            {
-                Console.WriteLine();
-            }
-        }
-
-        private static void ResetMainConsoleScrollback()
-        {
-            if (!OperatingSystem.IsWindows())
-                return;
-
-            try
-            {
-                int width = Math.Max(Console.BufferWidth, Console.WindowWidth);
-                int windowHeight = Math.Max(Console.WindowHeight, 1);
-                int originalHeight = Math.Max(Console.BufferHeight, windowHeight);
-
-                Console.SetCursorPosition(0, 0);
-
-                if (Console.BufferHeight != windowHeight)
-                    Console.SetBufferSize(width, windowHeight);
-
-                MoveCursorToVisibleHome();
-
-                Console.Clear();
-                MoveCursorToVisibleHome();
-
-                int restoredHeight = Math.Max(originalHeight, MinScrollableBufferHeight);
-                if (Console.BufferHeight != restoredHeight)
-                    Console.SetBufferSize(width, restoredHeight);
-
-                Console.Write("\u001b[1;1H");
-                Console.Out.Flush();
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-            catch (PlatformNotSupportedException)
-            {
-            }
-        }
-
-        private static void MoveCursorToVisibleHome()
-        {
-            if (!OperatingSystem.IsWindows())
-                return;
-
-            try
-            {
-                if (Console.WindowLeft != 0 || Console.WindowTop != 0)
-                    Console.SetWindowPosition(0, 0);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-            }
-            catch (IOException)
-            {
-            }
-            catch (UnauthorizedAccessException)
-            {
-            }
-            catch (PlatformNotSupportedException)
-            {
-            }
-        }
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern IntPtr GetStdHandle(int nStdHandle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool GetConsoleMode(IntPtr hConsoleHandle, out int lpMode);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool SetConsoleMode(IntPtr hConsoleHandle, int dwMode);
-
-        private static void EnterAlternateScreen()
-        {
-            if (_alternateScreenEnabled)
-                return;
-
-            Console.Write("\u001b[?1049h");
-            _alternateScreenEnabled = true;
-        }
-
-        private static void EnableAnsiClearSequences()
-        {
-            if (_virtualTerminalModeChecked || !OperatingSystem.IsWindows())
-                return;
-
-            _virtualTerminalModeChecked = true;
-
-            IntPtr handle = GetStdHandle(StdOutputHandle);
-            if (handle == IntPtr.Zero || handle == new IntPtr(-1))
-                return;
-
-            if (!GetConsoleMode(handle, out int mode))
-                return;
-
-            SetConsoleMode(handle, mode | EnableVirtualTerminalProcessing);
         }
     }
 }

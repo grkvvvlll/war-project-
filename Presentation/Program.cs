@@ -3,6 +3,12 @@ using Core.Interfaces;
 using Services.Battle;
 using Services.Logging;
 using Services.Random;
+using Services.ArmyBuilding;
+using Services.Formation;
+using Services.UI;
+using Core.Factories;
+using Core.Factories.Armies;
+using Core.Factories.Units;
 
 namespace Presentation
 {
@@ -29,7 +35,17 @@ namespace Presentation
                 logger,
                 formation);
 
-            var menu = new ConsoleMenu(randomService, logger, damageCalculator, battleField);
+            // Создание фабрик и ArmyBuilder
+            var unitCreatorFactory = new UnitCreatorFactory(randomService);
+            var unitCreators = unitCreatorFactory.Create();
+            var autoFactory = new AutoArmyFactory(unitCreators);
+            var manualFactory = new ManualArmyFactory(unitCreators);
+            var armyBuilder = new ArmyBuilder(autoFactory, manualFactory);
+            var formationSelector = new FormationSelector();
+            var logCleaner = new LogCleaner((RecordingBattleLogger)logger);
+            var armyPrinter = new ArmyPrinter();
+
+            var menu = new ConsoleMenu(randomService, logger, damageCalculator, battleField, armyBuilder, formationSelector, logCleaner, armyPrinter);
 
             try
             {
@@ -37,7 +53,6 @@ namespace Presentation
             }
             finally
             {
-                ConsoleMenu.RestoreConsoleScreen();
             }
         }
     }
