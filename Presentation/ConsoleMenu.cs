@@ -27,6 +27,14 @@ namespace Presentation
         private readonly FormationSelector _formationSelector;
         private readonly LogCleaner _logCleaner;
         private readonly ArmyPrinter _armyPrinter;
+        private readonly UnitRenumberer _unitRenumberer;
+        private readonly BudgetReader _budgetReader;
+        private readonly HelpPrinter _helpPrinter;
+        private readonly CreationTypeSelector _creationTypeSelector;
+        private readonly ObserverSettingsMenu _observerSettingsMenu;
+        private readonly ObserverAttacher _observerAttacher;
+  
+
 
         public ConsoleMenu(
             IRandomService random,
@@ -47,6 +55,14 @@ namespace Presentation
             _logCleaner = logCleaner;
             _armyPrinter = armyPrinter;
             _unitCreatorFactory = new UnitCreatorFactory(random);
+            _unitRenumberer = new UnitRenumberer();
+            _budgetReader = new BudgetReader();
+            _helpPrinter = new HelpPrinter(random);
+            _creationTypeSelector = new CreationTypeSelector();
+            _observerSettingsMenu = new ObserverSettingsMenu();
+            _observerAttacher = new ObserverAttacher();
+    
+
         }
 
         public void Run()
@@ -73,7 +89,7 @@ namespace Presentation
                         LoadGame();
                         break;
                     case "4":
-                        ShowObserverSettings();
+                        _observerSettingsMenu.Show();
                         break;
                     case "0":
                         return;
@@ -85,59 +101,27 @@ namespace Presentation
             }
         }
 
-        private void ShowObserverSettings()
-        {
-            while (true)
-            {
-                Console.Clear();
-                Console.WriteLine("=== Настройки наблюдателей ===");
-                Console.WriteLine($"1. Звук при смерти юнита: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
-                Console.WriteLine($"2. Файловый лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
-                Console.WriteLine();
-                Console.WriteLine("Наблюдатель 2 пишет только в logs/damage-log.txt.");
-                Console.WriteLine("Если он выключен, изменения HP в файл не добавляются.");
-                Console.WriteLine("Наблюдатель 1 только подаёт звук при смерти юнита.");
-                Console.WriteLine("Боевые сообщения в консоли выводит обычный логгер боя.");
-                Console.WriteLine("0. Назад");
-                Console.Write("Выберите пункт: ");
 
-                switch ((Console.ReadLine() ?? "").Trim())
-                {
-                    case "1":
-                        ObserverRegistry.DeathObserver.IsEnabled = !ObserverRegistry.DeathObserver.IsEnabled;
-                        break;
-                    case "2":
-                        ObserverRegistry.HealthObserver.IsEnabled = !ObserverRegistry.HealthObserver.IsEnabled;
-                        break;
-                    case "0":
-                        return;
-                    default:
-                        Console.WriteLine("Неверный выбор.");
-                        Console.ReadLine();
-                        break;
-                }
-            }
-        }
 
         private void StartNewGame()
         {
             _logCleaner.Clear();
             Console.Clear();
 
-            Console.Write("Введите бюджет для армий: ");
-            int budget = ReadInt();
+            int budget = _budgetReader.Read();
             Console.WriteLine();
 
             var formation = _formationSelector.Select();
             if (_battleField is BattleField bf) bf.SetFormation(formation);
 
-            var army1 = _armyBuilder.Build("Армия 1", budget, ChooseCreationType("Армия 1"));
-            RenumberUnitsFromFront(army1, isArmy1: true);
+            var army1 = _armyBuilder.Build("Армия 1", budget, _creationTypeSelector.Select("Армия 1"));
+            _unitRenumberer.Renumber(army1, true, formation);
 
-            var army2 = _armyBuilder.Build("Армия 2", budget, ChooseCreationType("Армия 2"));
-            RenumberUnitsFromFront(army2, isArmy1: false);
-            ObserverRegistry.Attach(army1);
-            ObserverRegistry.Attach(army2);
+            var army2 = _armyBuilder.Build("Армия 2", budget, _creationTypeSelector.Select("Армия 2"));
+            _unitRenumberer.Renumber(army2, false, formation);
+
+            _observerAttacher.AttachArmy(army1);
+            _observerAttacher.AttachArmy(army2);
 
             try
             {
@@ -152,123 +136,48 @@ namespace Presentation
                 Console.ReadLine();
 
                 var result = _battleField.StartBattle(army1, army2, autoMode: false);
-
                 if (result.Winner == BattleField.DrawResult)
-                {
-                    Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
-                    AskToSaveBattle(result);
-                    return;
-                }
+{
+    Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
+    AskToSaveBattle(result);
+    return;
+}
 
-                if (result.Winner == BattleField.SavedAndStoppedResult)
-                {
-                    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
-                    Console.WriteLine("Нажмите Enter для возврата в меню...");
-                    Console.ReadLine();
-                    return;
-                }
-                if (result.Winner == BattleField.StoppedWithoutSaveResult)
-                {
-                    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
-                    Console.WriteLine("Нажмите Enter для возврата в меню...");
-                    Console.ReadLine();
-                    return;
-                }
+if (result.Winner == BattleField.SavedAndStoppedResult)
+{
+    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+    Console.WriteLine("Нажмите Enter для возврата в меню...");
+    Console.ReadLine();
+    return;
+}
 
-                Console.WriteLine($"\nПобедитель: {result.Winner}");
-                Console.WriteLine($"Ходов: {result.Turns}");
-                AskToSaveBattle(result);
+if (result.Winner == BattleField.StoppedWithoutSaveResult)
+{
+    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+    Console.WriteLine("Нажмите Enter для возврата в меню...");
+    Console.ReadLine();
+    return;
+}
+
+Console.WriteLine($"\nПобедитель: {result.Winner}");
+Console.WriteLine($"Ходов: {result.Turns}");
+AskToSaveBattle(result);
             }
             finally
             {
-                ObserverRegistry.Detach(army1);
-                ObserverRegistry.Detach(army2);
+                _observerAttacher.DetachArmy(army1);
+                _observerAttacher.DetachArmy(army2);
             }
         }
 
-        private bool ChooseCreationType(string armyName)
-        {
-            while (true)
-            {
-                Console.WriteLine($"\n{armyName}:");
-                Console.WriteLine("1. Автоматическое создание");
-                Console.WriteLine("2. Ручное создание");
-                Console.Write("Выберите способ (1-2): ");
-
-                var choice = Console.ReadLine()?.Trim();
-
-                if (choice == "1")
-                    return true;
-                if (choice == "2")
-                    return false;
-
-                Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine(" Неверный ввод. Пожалуйста, введите 1 или 2.");
-                Console.ResetColor();
-                Console.WriteLine();
-            }
-        }
 
         private void ShowHelp()
         {
             _logCleaner.Clear();
             Console.Clear();
-
-            var heavy = new HeavyUnitCreator().CreateUnit("Heavy");
-            var light = new LightUnitCreator(_random).CreateUnit("Light");
-            var archer = new ArcherUnitCreator().CreateUnit("Archer");
-            var healer = new HealerUnitCreator().CreateUnit("Healer");
-            var wizard = new WizardUnitCreator(new RandomService()).CreateUnit("Wizard");
-
-            PrintUnitInfo("🛡️ HeavyUnit - сильный солдат:", heavy);
-            PrintUnitInfo("⚔️ LightUnit - обычный солдат:", light);
-            PrintUnitInfo("🏹 Archer - лучник:", archer);
-            PrintUnitInfo("💚 Healer - целитель:", healer);
-            PrintUnitInfo("🔮 Wizard - маг:", wizard);
-            Console.WriteLine("🏰 Гуляй-город: огромная защита, не атакует, не лечится, не клонируется.\n");
-
-            Console.WriteLine("Алгоритм игры:");
-            Console.WriteLine("1. Случайным образом выбирается армия, атакующая первой.");
-            Console.WriteLine("2. Ближайшие друг к другу солдаты вражеских армий наносят по одному удару.");
-            Console.WriteLine("3. Юниты со SpecialAbility используют свои способности:");
-            Console.WriteLine("   - 🏹 Лучники стреляют во врагов (если не на передней линии).");
-            Console.WriteLine("   - 💚 Целители лечат союзников (кроме Heavy и себя).");
-            Console.WriteLine("   - 🔮 Маги клонируют союзников (Light или Archer) с накоплением вероятности.");
-            Console.WriteLine("4. Убитые солдаты исчезают.");
+            _helpPrinter.Print();
             Console.WriteLine("\nНажмите Enter для возврата в меню");
             Console.ReadLine();
-        }
-
-        private void PrintUnitInfo(string title, IUnit unit)
-        {
-            Console.WriteLine(title);
-            Console.WriteLine($"   HP: {unit.Health}");
-            Console.WriteLine($"   ATK: {unit.Attack}");
-            Console.WriteLine($"   DEF: {unit.Defence}");
-            Console.WriteLine($"   COST: {unit.Cost}");
-            if (unit is Archer archer)
-                Console.WriteLine($"   RANGE: {archer.Range}");
-            if (unit is Healer healer)
-            {
-                Console.WriteLine($"   HEAL_RANGE: {healer.HealRange}");
-                Console.WriteLine($"   HEAL_POWER: {healer.HealPower}");
-            }
-            if (unit is Wizard wizard)
-            {
-                Console.WriteLine($"   SPELL_RANGE: {wizard.SpellRange}");
-                Console.WriteLine($"   CLONE_CHANCE: {wizard.ClonePower}%");
-            }
-            Console.WriteLine();
-        }
-
-        private int ReadInt()
-        {
-            while (true)
-            {
-                if (int.TryParse(Console.ReadLine(), out int value) && value > 0)
-                    return value;
-                Console.Write("Введите корректное число: ");
-            }
         }
 
         private void AskToSaveBattle(BattleResult result)
@@ -297,6 +206,7 @@ namespace Presentation
             Console.WriteLine("Нажмите Enter для возврата в меню...");
             Console.ReadLine();
         }
+
 
         private void LoadGame()
         {
@@ -417,30 +327,6 @@ namespace Presentation
             }
         }
 
-        private void RenumberUnitsFromFront(IArmy army, bool isArmy1)
-        {
-            var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
-
-            bool wallFormation = _battleField is BattleField bf && bf.GetFormation() is WallFormation;
-
-            if (isArmy1 && !wallFormation)
-            {
-                for (int i = 0; i < aliveUnits.Count; i++)
-                {
-                    var unit = aliveUnits[aliveUnits.Count - 1 - i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
-            else
-            {
-                for (int i = 0; i < aliveUnits.Count; i++)
-                {
-                    var unit = aliveUnits[i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
-        }
+        
     }
 }
