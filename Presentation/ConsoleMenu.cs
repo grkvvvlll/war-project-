@@ -33,7 +33,7 @@ namespace Presentation
         private readonly CreationTypeSelector _creationTypeSelector;
         private readonly ObserverSettingsMenu _observerSettingsMenu;
         private readonly ObserverAttacher _observerAttacher;
-  
+
 
 
         public ConsoleMenu(
@@ -44,7 +44,12 @@ namespace Presentation
             ArmyBuilder armyBuilder,
             FormationSelector formationSelector,
             LogCleaner logCleaner,
-            ArmyPrinter armyPrinter)
+            ArmyPrinter armyPrinter,
+            UnitRenumberer unitRenumberer,
+            CreationTypeSelector creationTypeSelector,
+            ObserverAttacher observerAttacher,
+            BudgetReader budgetReader)
+            
         {
             _random = random;
             _logger = logger;
@@ -61,7 +66,8 @@ namespace Presentation
             _creationTypeSelector = new CreationTypeSelector();
             _observerSettingsMenu = new ObserverSettingsMenu();
             _observerAttacher = new ObserverAttacher();
-    
+            _budgetReader = budgetReader;
+            _unitCreatorFactory = new UnitCreatorFactory(random);
 
         }
 

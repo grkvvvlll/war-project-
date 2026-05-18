@@ -1,14 +1,15 @@
-﻿using Core.Formations;
-using Core.Interfaces;
-using Services.Battle;
-using Services.Logging;
-using Services.Random;
-using Services.ArmyBuilding;
-using Services.Formation;
-using Services.UI;
-using Core.Factories;
+﻿using Core.Factories;
 using Core.Factories.Armies;
 using Core.Factories.Units;
+using Core.Formations;
+using Core.Interfaces;
+using Services.ArmyBuilding;
+using Services.Battle;
+using Services.Formation;
+using Services.Logging;
+using Services.Observers;
+using Services.Random;
+using Services.UI;
 
 namespace Presentation
 {
@@ -45,7 +46,19 @@ namespace Presentation
             var logCleaner = new LogCleaner((RecordingBattleLogger)logger);
             var armyPrinter = new ArmyPrinter();
 
-            var menu = new ConsoleMenu(randomService, logger, damageCalculator, battleField, armyBuilder, formationSelector, logCleaner, armyPrinter);
+            var menu = new ConsoleMenu(
+                randomService,
+                logger,
+                damageCalculator,
+                battleField,
+                armyBuilder,
+                formationSelector,
+                logCleaner,
+                armyPrinter,
+                new UnitRenumberer(),
+                new CreationTypeSelector(),
+                new ObserverAttacher(),
+                new BudgetReader());
 
             try
             {
