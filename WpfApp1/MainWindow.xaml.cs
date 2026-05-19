@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -6,6 +7,8 @@ using System.Windows.Media;
 using Core.Formations;
 using Core.Interfaces;
 using Services.Observers;
+using Services.Random;
+using Services.Storage;
 using WpfPresentation.Engine;
 using WpfPresentation.Views;
 
@@ -103,6 +106,7 @@ namespace WpfPresentation
             _battleView.UndoRequested += OnUndo;
             _battleView.RedoRequested += OnRedo;
             _battleView.ResetRequested += OnReset;
+            _battleView.SaveRequested += OnSave;
             _battleView.ArmyCompositionRequested += ShowArmyComposition;
             _battleView.AutoModeRequested += OnAutoMode;
             _battleView.ExitRequested += ShowMainMenu;
@@ -114,6 +118,61 @@ namespace WpfPresentation
             MainContent.Content = _battleView;
             SyncBattleView();
         }
+        private void ShowBattleFromSave(BattleResumeData resume)
+        {
+            _army1 = resume.Army1;
+            _army2 = resume.Army2;
+            _selectedFormation = resume.Formation;
+
+            _engine = new WpfBattleEngine(resume);
+            _battleView = new BattleView(_army1, _army2, _selectedFormation);
+
+            _battleView.NextRoundRequested += OnNextRound;
+            _battleView.UndoRequested += OnUndo;
+            _battleView.RedoRequested += OnRedo;
+            _battleView.ResetRequested += OnReset;
+            _battleView.ArmyCompositionRequested += ShowArmyComposition;
+            _battleView.AutoModeRequested += OnAutoMode;
+            _battleView.ExitRequested += ShowMainMenu;
+            _battleView.SaveRequested += OnSave;
+            _battleView.FormationChangeRequested += (formation) =>
+            {
+                _engine.ChangeFormationCommand(formation);
+                SyncBattleView();
+            };
+
+            MainContent.Content = _battleView;
+            SyncBattleView();
+        }
+
+        private void OnSave()
+        {
+            if (_engine == null || _battleView == null) return;
+
+            var dialog = new SaveGameWindow(this);
+            if (dialog.ShowDialog() != true) return;
+
+            try
+            {
+                var save = BattleSaveService.Instance.CreateInProgressSave(
+                    _engine.Army1,
+                    _engine.Army2,
+                    _engine.Round,
+                    _engine.Army1TurnState,
+                    _engine.Score1,
+                    _engine.Score2,
+                    _engine.Formation,
+                    Enumerable.Empty<string>(),
+                    dialog.SaveName);
+
+                BattleSaveService.Instance.Save(save);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Не удалось сохранить: {ex.Message}", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
 
         private async void OnNextRound()
         {
@@ -122,7 +181,10 @@ namespace WpfPresentation
             _battleView.ClearLog();
             _battleView.NextRoundButton.IsEnabled = false;
 
+            bool deathBeepEnabled = ObserverRegistry.DeathObserver.IsEnabled;
+            ObserverRegistry.DeathObserver.IsEnabled = false;
             var events = _engine.ExecuteRoundCommand();
+            ObserverRegistry.DeathObserver.IsEnabled = deathBeepEnabled;
 
             foreach (var e in events)
             {
@@ -179,6 +241,8 @@ namespace WpfPresentation
                     case BattleEventType.Death:
                         _battleView.PlayDeath(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
                         _battleView.DrawBattlefield();
+                        if (deathBeepEnabled && OperatingSystem.IsWindows())
+                            try { Console.Beep(1200, 300); } catch { }
                         break;
 
                     case BattleEventType.RoundEnd:
@@ -190,8 +254,7 @@ namespace WpfPresentation
                         RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
                         RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
                         _battleView.DrawBattlefield();
-                        MessageBox.Show($"Победитель: {e.Winner}\nСчёт: {e.Score1} : {e.Score2}");
-                        ShowMainMenu();
+                        ShowBattleResult(e.Winner ?? "", e.Score1, e.Score2, _engine.Round);
                         return;
                 }
             }
@@ -245,8 +308,8 @@ namespace WpfPresentation
                 var end = events.FirstOrDefault(e => e.Type == BattleEventType.BattleEnd);
                 if (end != null)
                 {
-                    MessageBox.Show($"Победитель: {end.Winner}\nСчёт: {end.Score1} : {end.Score2}");
-                    break;
+                    ShowBattleResult(end.Winner ?? "", end.Score1, end.Score2, _engine.Round);
+                    return;
                 }
 
                 await Task.Delay(250);
@@ -260,18 +323,16 @@ namespace WpfPresentation
         {
             if (_engine == null) return;
 
-            var text = new StringBuilder();
-            AppendArmy(text, _engine.Army1);
-            text.AppendLine();
-            AppendArmy(text, _engine.Army2);
-            MessageBox.Show(text.ToString(), "Состав армий");
+            var window = new ArmyCompositionWindow(_engine.Army1, _engine.Army2, this);
+            window.ShowDialog();
         }
 
-        private static void AppendArmy(StringBuilder text, IArmy army)
+        private void ShowBattleResult(string winner, int score1, int score2, int rounds)
         {
-            text.AppendLine(army.Name);
-            foreach (var unit in army.Units)
-                text.AppendLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
+            var win = new BattleResultWindow(this, winner, score1, score2,
+                                             _engine!.Army1, _engine.Army2, rounds);
+            win.ShowDialog();
+            ShowMainMenu();
         }
 
         private void SetBattleButtonsEnabled(bool isEnabled)
@@ -302,12 +363,26 @@ namespace WpfPresentation
 
         private void ShowLoadGame()
         {
-            MessageBox.Show("Загрузить игру — скоро!");
+            var dialog = new LoadGameWindow(this);
+            if (dialog.ShowDialog() != true || dialog.SelectedSave == null) return;
+
+            try
+            {
+                var save = BattleSaveService.Instance.Load(dialog.SelectedSave.FileName);
+                var resume = BattleSaveService.Instance.RestoreBattle(save, new RandomService());
+                ShowBattleFromSave(resume);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Не удалось загрузить сохранение:\n{ex.Message}", "Ошибка",
+                                MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         }
 
         private void ShowHelp()
         {
-            MessageBox.Show("Помощь — скоро!");
+            var win = new HelpWindow(this);
+            win.ShowDialog();
         }
 
         private void ShowObservers()

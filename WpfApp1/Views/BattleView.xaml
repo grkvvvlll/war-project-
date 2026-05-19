@@ -135,33 +135,36 @@
 
                 <Button x:Name="ChangeFormationButton" Content="Изменить построение"
                         Foreground="#D3D1C7" BorderBrush="#5F5E5A"
-                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,0"/>
+
+                <!-- Выпадающая панель построений -->
+                <Border x:Name="FormationPanel"
+                        BorderBrush="#444441" BorderThickness="1"
+                        Background="#252523"
+                        Padding="10" Margin="0,2,0,8"
+                        Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="ПОСТРОЕНИЕ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,8"/>
+                        <Button x:Name="Formation1Button" Content="Бой на мосту"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="Formation2Button" Content="Широкий мост"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="Formation3Button" Content="Стенка на стенку"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="CancelFormationButton" Content="Отмена"
+                                Foreground="#888780" BorderBrush="#444441"
+                                Style="{StaticResource ActionButtonStyle}"/>
+                    </StackPanel>
+                </Border>
 
                 <Button x:Name="AutoModeButton" Content="Авторежим"
                         Foreground="#D3D1C7" BorderBrush="#5F5E5A"
                         Style="{StaticResource ActionButtonStyle}"/>
             </StackPanel>
 
-            <!-- Подпанель изменения построения -->
-            <Border x:Name="FormationPanel" Grid.Row="1"
-                    BorderBrush="#444441" BorderThickness="1"
-                    Padding="10" Visibility="Collapsed" VerticalAlignment="Top">
-                <StackPanel>
-                    <TextBlock Text="ПОСТРОЕНИЕ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,8"/>
-                    <Button x:Name="Formation1Button" Content="Бой на мосту"
-                            Foreground="#D3D1C7" BorderBrush="#5F5E5A"
-                            Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
-                    <Button x:Name="Formation2Button" Content="Широкий мост"
-                            Foreground="#D3D1C7" BorderBrush="#5F5E5A"
-                            Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
-                    <Button x:Name="Formation3Button" Content="Стенка на стенку"
-                            Foreground="#D3D1C7" BorderBrush="#5F5E5A"
-                            Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
-                    <Button x:Name="CancelFormationButton" Content="Отмена"
-                            Foreground="#888780" BorderBrush="#444441"
-                            Style="{StaticResource ActionButtonStyle}"/>
-                </StackPanel>
-            </Border>
 
             <StackPanel Grid.Row="2">
                 <Button x:Name="SaveButton" Content="Сохранить"

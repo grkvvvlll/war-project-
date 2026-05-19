@@ -1,0 +1,183 @@
+﻿<Window x:Class="WpfPresentation.Views.BattleResultWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Width="440" Height="360"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Window.Triggers>
+        <EventTrigger RoutedEvent="Window.Loaded">
+            <BeginStoryboard>
+                <Storyboard>
+                    <DoubleAnimation Storyboard.TargetName="RootBorder"
+                                     Storyboard.TargetProperty="Opacity"
+                                     From="0" To="1" Duration="0:0:0.4">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                    <DoubleAnimation Storyboard.TargetName="ContentSlide"
+                                     Storyboard.TargetProperty="Y"
+                                     From="20" To="0" Duration="0:0:0.45">
+                        <DoubleAnimation.EasingFunction>
+                            <QuadraticEase EasingMode="EaseOut"/>
+                        </DoubleAnimation.EasingFunction>
+                    </DoubleAnimation>
+                </Storyboard>
+            </BeginStoryboard>
+        </EventTrigger>
+    </Window.Triggers>
+
+    <Border x:Name="RootBorder"
+            Background="#2C2C2A"
+            BorderBrush="#5F5E5A"
+            BorderThickness="1"
+            Opacity="0">
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Шапка -->
+            <Border Grid.Row="0"
+                    Background="#252523"
+                    BorderBrush="#444441"
+                    BorderThickness="0,0,0,1"
+                    Padding="20,10"
+                    MouseLeftButtonDown="Header_MouseDown">
+                <TextBlock Text="БОЙ ЗАВЕРШЁН"
+                           FontFamily="Georgia" FontSize="11"
+                           Foreground="#5F5E5A"
+                           HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- Контент -->
+            <StackPanel Grid.Row="1" VerticalAlignment="Center">
+                <StackPanel.RenderTransform>
+                    <TranslateTransform x:Name="ContentSlide" Y="0"/>
+                </StackPanel.RenderTransform>
+
+                <!-- Корона -->
+                <TextBlock x:Name="TrophyIcon"
+                           Text="♛"
+                           FontSize="36"
+                           Foreground="#EF9F27"
+                           HorizontalAlignment="Center"
+                           Margin="0,16,0,8"/>
+
+                <!-- Победитель -->
+                <TextBlock x:Name="WinnerText"
+                           FontFamily="Georgia" FontSize="22"
+                           Foreground="#FAC775"
+                           HorizontalAlignment="Center"
+                           TextAlignment="Center"
+                           Margin="24,0"/>
+
+                <Rectangle Height="1" Fill="#EF9F27" Width="60"
+                           HorizontalAlignment="Center" Margin="0,10,0,16"/>
+
+                <!-- Счёт -->
+                <Grid Width="280" HorizontalAlignment="Center" Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" HorizontalAlignment="Center">
+                        <TextBlock x:Name="Army1NameText"
+                                   FontFamily="Georgia" FontSize="11"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock x:Name="Score1Text"
+                                   FontFamily="Georgia" FontSize="32"
+                                   Foreground="#D3D1C7"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="Alive1Text"
+                                   FontFamily="Georgia" FontSize="10"
+                                   Foreground="#5F5E5A"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+
+                    <TextBlock Grid.Column="1"
+                               Text="—"
+                               FontFamily="Georgia" FontSize="20"
+                               Foreground="#444441"
+                               VerticalAlignment="Center"
+                               Margin="12,0"/>
+
+                    <StackPanel Grid.Column="2" HorizontalAlignment="Center">
+                        <TextBlock x:Name="Army2NameText"
+                                   FontFamily="Georgia" FontSize="11"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   TextWrapping="Wrap"/>
+                        <TextBlock x:Name="Score2Text"
+                                   FontFamily="Georgia" FontSize="32"
+                                   Foreground="#D3D1C7"
+                                   HorizontalAlignment="Center"/>
+                        <TextBlock x:Name="Alive2Text"
+                                   FontFamily="Georgia" FontSize="10"
+                                   Foreground="#5F5E5A"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Раунды -->
+                <TextBlock x:Name="RoundsText"
+                           FontFamily="Georgia" FontSize="11"
+                           Foreground="#5F5E5A"
+                           HorizontalAlignment="Center"/>
+            </StackPanel>
+
+            <!-- Кнопка -->
+            <Border Grid.Row="2"
+                    BorderBrush="#444441"
+                    BorderThickness="0,1,0,0"
+                    Padding="24,14">
+                <Button x:Name="MenuButton"
+                        Content="Вернуться в меню"
+                        Height="38"
+                        FontFamily="Georgia" FontSize="13"
+                        Foreground="#FAC775"
+                        Cursor="Hand"
+                        Click="MenuButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd"
+                                                Background="Transparent"
+                                                BorderBrush="#888780"
+                                                BorderThickness="1">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#33FAC775"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FAC775"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#55FAC775"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

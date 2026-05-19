@@ -21,6 +21,7 @@ namespace WpfPresentation.Views
         public event Action? ArmyCompositionRequested;
         public event Action? AutoModeRequested;
         public event Action? ExitRequested;
+        public event Action? SaveRequested;
         public event Action<IBattleFormation>? FormationChangeRequested;
 
         private IArmy _army1;
@@ -58,6 +59,7 @@ namespace WpfPresentation.Views
             RedoButton.Click += (_, _) => RedoRequested?.Invoke();
             ResetButton.Click += (_, _) => ResetRequested?.Invoke();
             ExitButton.Click += (_, _) => ExitRequested?.Invoke();
+            SaveButton.Click += (_, _) => SaveRequested?.Invoke();
 
             ChangeFormationButton.Click += (_, _) =>
             {
