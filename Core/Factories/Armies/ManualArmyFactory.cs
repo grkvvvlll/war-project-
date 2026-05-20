@@ -4,13 +4,21 @@ using Core.Factories.Units;
 
 namespace Core.Factories.Armies
 {
-    public class ManualArmyFactory
+    public class ManualArmyFactory : IArmyFactory
     {
         private readonly Dictionary<string, UnitCreator> _unitCreators;
+        private List<string> _unitChoices = new();
+
+        public string FactoryName => "Ручная";
 
         public ManualArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {
             _unitCreators = unitCreators;
+        }
+
+        public void SetUnitChoices(IEnumerable<string> unitChoices)
+        {
+            _unitChoices = unitChoices.ToList();
         }
 
         public int GetUnitCost(string unitType)
@@ -25,7 +33,12 @@ namespace Core.Factories.Armies
             return _unitCreators.Values.Min(c => c.UnitCost);
         }
 
-        public IArmy CreateArmy(string name, int budget, List<string> unitChoices)
+        public IArmy CreateArmy(string name, int budget)
+        {
+            return CreateArmy(name, budget, _unitChoices);
+        }
+
+        public IArmy CreateArmy(string name, int budget, IReadOnlyList<string> unitChoices)
         {
             var units = new List<IUnit>();
             int spentBudget = 0;

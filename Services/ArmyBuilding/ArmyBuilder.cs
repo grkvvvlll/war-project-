@@ -16,15 +16,16 @@ namespace Services.ArmyBuilding
 
         public IArmy Build(string name, int budget, bool isAuto)
         {
-            if (isAuto)
-            {
-                return _autoFactory.CreateArmy(name, budget);
-            }
-            else
+            IArmyFactory factory = _autoFactory;
+
+            if (!isAuto)
             {
                 var choices = GetManualUnitChoices(name, budget);
-                return _manualFactory.CreateArmy(name, budget, choices);
+                _manualFactory.SetUnitChoices(choices);
+                factory = _manualFactory;
             }
+
+            return factory.CreateArmy(name, budget);
         }
 
         public List<string> GetManualUnitChoices(string armyName, int budget)

@@ -13,6 +13,7 @@ using Services.Observers;
 using Services.ArmyBuilding;
 using Services.Formation;
 using Services.UI;
+using Services.Commands;
 
 namespace Presentation
 {
@@ -33,6 +34,8 @@ namespace Presentation
         private readonly CreationTypeSelector _creationTypeSelector;
         private readonly ObserverSettingsMenu _observerSettingsMenu;
         private readonly ObserverAttacher _observerAttacher;
+        private readonly CommandHistory _commandHistory = new();
+        private bool _exitRequested;
 
 
 
@@ -73,7 +76,9 @@ namespace Presentation
 
         public void Run()
         {
-            while (true)
+            _exitRequested = false;
+
+            while (!_exitRequested)
             {
                 Console.Clear();
                 Console.WriteLine("1. Новая игра");
@@ -83,28 +88,45 @@ namespace Presentation
                 Console.WriteLine("0. Выход");
                 Console.Write("Выберите пункт: ");
 
-                switch (Console.ReadLine())
+                var commands = CreateMainMenuCommands();
+                var choice = Console.ReadLine() ?? "";
+
+                if (commands.TryGetValue(choice, out var command))
                 {
-                    case "1":
-                        StartNewGame();
-                        break;
-                    case "2":
-                        ShowHelp();
-                        break;
-                    case "3":
-                        LoadGame();
-                        break;
-                    case "4":
-                        _observerSettingsMenu.Show();
-                        break;
-                    case "0":
-                        return;
-                    default:
-                        Console.WriteLine("Неверный выбор.");
-                        Console.ReadLine();
-                        break;
+                    _commandHistory.Execute(command);
+                    continue;
                 }
+
+                Console.WriteLine("Неверный выбор.");
+                Console.ReadLine();
             }
+        }
+
+        private Dictionary<string, IGameCommand> CreateMainMenuCommands()
+        {
+            return new Dictionary<string, IGameCommand>
+            {
+                ["1"] = new ActionGameCommand(
+                    "Новая игра",
+                    StartNewGame,
+                    () => { }),
+                ["2"] = new ActionGameCommand(
+                    "Помощь",
+                    ShowHelp,
+                    () => { }),
+                ["3"] = new ActionGameCommand(
+                    "Загрузить игру",
+                    LoadGame,
+                    () => { }),
+                ["4"] = new ActionGameCommand(
+                    "Настройки наблюдателей",
+                    _observerSettingsMenu.Show,
+                    () => { }),
+                ["0"] = new ActionGameCommand(
+                    "Выход",
+                    () => _exitRequested = true,
+                    () => _exitRequested = false)
+            };
         }
 
 
