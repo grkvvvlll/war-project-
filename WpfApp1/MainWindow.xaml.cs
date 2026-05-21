@@ -1,14 +1,10 @@
 ﻿using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Media;
-using Core.Formations;
 using Core.Interfaces;
 using Services.Observers;
 using Services.Random;
 using Services.Storage;
+using Services.UI;
 using WpfPresentation.Engine;
 using WpfPresentation.Views;
 
@@ -27,6 +23,7 @@ namespace WpfPresentation
         private IArmy? _army2;
         private int _budget;
         private WpfBattleEngine? _engine;
+        private readonly UnitRenumberer _unitRenumberer = new();
 
         private void ShowMainMenu()
         {
@@ -34,7 +31,6 @@ namespace WpfPresentation
             menu.NewGameRequested += ShowNewGame;
             menu.LoadGameRequested += ShowLoadGame;
             menu.HelpRequested += ShowHelp;
-            menu.ObserversRequested += ShowObservers;
             menu.ExitRequested += () => Application.Current.Shutdown();
             MainContent.Content = menu;
         }
@@ -97,24 +93,11 @@ namespace WpfPresentation
 
         private void ShowBattle()
         {
-            RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
-            RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
+            RenumberVisibleArmies();
 
             _engine = new WpfBattleEngine(_army1!, _army2!, _selectedFormation!);
             _battleView = new BattleView(_army1!, _army2!, _selectedFormation!);
-            _battleView.NextRoundRequested += OnNextRound;
-            _battleView.UndoRequested += OnUndo;
-            _battleView.RedoRequested += OnRedo;
-            _battleView.ResetRequested += OnReset;
-            _battleView.SaveRequested += OnSave;
-            _battleView.ArmyCompositionRequested += ShowArmyComposition;
-            _battleView.AutoModeRequested += OnAutoMode;
-            _battleView.ExitRequested += ShowMainMenu;
-            _battleView.FormationChangeRequested += (formation) =>
-            {
-                _engine.ChangeFormationCommand(formation);
-                SyncBattleView();
-            };
+            WireBattleView(_battleView);
             MainContent.Content = _battleView;
             SyncBattleView();
         }
@@ -126,22 +109,30 @@ namespace WpfPresentation
 
             _engine = new WpfBattleEngine(resume);
             _battleView = new BattleView(_army1, _army2, _selectedFormation);
-
-            _battleView.NextRoundRequested += OnNextRound;
-            _battleView.UndoRequested += OnUndo;
-            _battleView.RedoRequested += OnRedo;
-            _battleView.ResetRequested += OnReset;
-            _battleView.ArmyCompositionRequested += ShowArmyComposition;
-            _battleView.AutoModeRequested += OnAutoMode;
-            _battleView.ExitRequested += ShowMainMenu;
-            _battleView.SaveRequested += OnSave;
-            _battleView.FormationChangeRequested += (formation) =>
-            {
-                _engine.ChangeFormationCommand(formation);
-                SyncBattleView();
-            };
+            WireBattleView(_battleView);
 
             MainContent.Content = _battleView;
+            SyncBattleView();
+        }
+
+        private void WireBattleView(BattleView battleView)
+        {
+            battleView.NextRoundRequested += OnNextRound;
+            battleView.UndoRequested += OnUndo;
+            battleView.RedoRequested += OnRedo;
+            battleView.ResetRequested += OnReset;
+            battleView.SaveRequested += OnSave;
+            battleView.ArmyCompositionRequested += ShowArmyComposition;
+            battleView.AutoModeRequested += OnAutoMode;
+            battleView.ExitRequested += ShowMainMenu;
+            battleView.FormationChangeRequested += OnFormationChangeRequested;
+        }
+
+        private void OnFormationChangeRequested(IBattleFormation formation)
+        {
+            if (_engine == null) return;
+
+            _engine.ChangeFormationCommand(formation);
             SyncBattleView();
         }
 
@@ -251,8 +242,7 @@ namespace WpfPresentation
                         break;
 
                     case BattleEventType.BattleEnd:
-                        RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
-                        RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
+                        RenumberVisibleArmies();
                         _battleView.DrawBattlefield();
                         ShowBattleResult(e.Winner ?? "", e.Score1, e.Score2, _engine.Round);
                         return;
@@ -260,8 +250,7 @@ namespace WpfPresentation
             }
 
             // Перенумерация с фронта в конце каждого раунда
-            RenumberUnitsFromFront(_army1!, isArmy1: true, _selectedFormation!);
-            RenumberUnitsFromFront(_army2!, isArmy1: false, _selectedFormation!);
+            RenumberVisibleArmies();
             _battleView.DrawBattlefield();
             _battleView.NextRoundButton.IsEnabled = true;
             SyncBattleView();
@@ -385,135 +374,12 @@ namespace WpfPresentation
             win.ShowDialog();
         }
 
-        private void ShowObservers()
+        private void RenumberVisibleArmies()
         {
-            var win = new Window
-            {
-                Title = "Настройки наблюдателей",
-                Width = 380,
-                Height = 220,
-                ResizeMode = ResizeMode.NoResize,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner,
-                Owner = this,
-                Background = new SolidColorBrush(Color.FromRgb(0x2C, 0x2C, 0x2A))
-            };
+            if (_army1 == null || _army2 == null || _selectedFormation == null) return;
 
-            var root = new StackPanel { Margin = new Thickness(28) };
-
-            root.Children.Add(new TextBlock
-            {
-                Text = "Наблюдатели",
-                FontFamily = new FontFamily("Georgia"),
-                FontSize = 18,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xFA, 0xC7, 0x75)),
-                Margin = new Thickness(0, 0, 0, 20)
-            });
-
-            root.Children.Add(MakeObserverRow(
-                "Звук при гибели юнита",
-                "Beep при каждой смерти",
-                ObserverRegistry.DeathObserver.IsEnabled,
-                v => ObserverRegistry.DeathObserver.IsEnabled = v));
-
-            root.Children.Add(MakeObserverRow(
-                "Лог урона в файл",
-                "logs/damage-log.txt",
-                ObserverRegistry.HealthObserver.IsEnabled,
-                v => ObserverRegistry.HealthObserver.IsEnabled = v));
-
-            win.Content = root;
-            win.ShowDialog();
-        }
-
-        private static UIElement MakeObserverRow(string title, string subtitle,
-            bool initial, Action<bool> onChange)
-        {
-            var row = new Grid { Margin = new Thickness(0, 0, 0, 14) };
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
-            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
-
-            var textCol = new StackPanel();
-            textCol.Children.Add(new TextBlock
-            {
-                Text = title,
-                FontFamily = new FontFamily("Georgia"),
-                FontSize = 13,
-                Foreground = new SolidColorBrush(Color.FromRgb(0xD3, 0xD1, 0xC7))
-            });
-            textCol.Children.Add(new TextBlock
-            {
-                Text = subtitle,
-                FontSize = 11,
-                Foreground = new SolidColorBrush(Color.FromRgb(0x5F, 0x5E, 0x5A)),
-                Margin = new Thickness(0, 2, 0, 0)
-            });
-            Grid.SetColumn(textCol, 0);
-            row.Children.Add(textCol);
-
-            bool state = initial;
-
-            var btn = new Button
-            {
-                Width = 72,
-                Height = 30,
-                FontFamily = new FontFamily("Georgia"),
-                FontSize = 12,
-                Cursor = Cursors.Hand,
-                BorderThickness = new Thickness(1),
-                Background = Brushes.Transparent
-            };
-            UpdateToggleButton(btn, state);
-            Grid.SetColumn(btn, 1);
-
-            btn.Click += (_, _) =>
-            {
-                state = !state;
-                onChange(state);
-                UpdateToggleButton(btn, state);
-            };
-
-            row.Children.Add(btn);
-            return row;
-        }
-
-        private static void UpdateToggleButton(Button btn, bool state)
-        {
-            btn.Content = state ? "ВКЛ" : "ВЫКЛ";
-            btn.Foreground = state
-                ? new SolidColorBrush(Color.FromRgb(0x1D, 0x9E, 0x75))
-                : new SolidColorBrush(Color.FromRgb(0x5F, 0x5E, 0x5A));
-            btn.BorderBrush = state
-                ? new SolidColorBrush(Color.FromRgb(0x1D, 0x9E, 0x75))
-                : new SolidColorBrush(Color.FromRgb(0x44, 0x44, 0x41));
-        }
-
-        /// <summary>
-        /// Переименовывает юнитов армии так, чтобы фронтовой юнит всегда был #1.
-        /// Логика идентична ConsoleMenu.RenumberUnitsFromFront.
-        /// </summary>
-        private static void RenumberUnitsFromFront(IArmy army, bool isArmy1, IBattleFormation formation)
-        {
-            var aliveUnits = army.Units.Where(u => u.IsAlive).ToList();
-            bool isWall = formation is WallFormation;
-
-            if (isArmy1 && !isWall)
-            {
-                for (int i = 0; i < aliveUnits.Count; i++)
-                {
-                    var unit = aliveUnits[aliveUnits.Count - 1 - i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
-            else
-            {
-                for (int i = 0; i < aliveUnits.Count; i++)
-                {
-                    var unit = aliveUnits[i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
+            _unitRenumberer.Renumber(_army1, isArmy1: true, _selectedFormation);
+            _unitRenumberer.Renumber(_army2, isArmy1: false, _selectedFormation);
         }
     }
 }

@@ -6,6 +6,7 @@ using Services.Commands;
 using Services.Observers;
 using Services.Random;
 using Services.Storage;
+using Services.UI;
 using Core.Entities.Buffs;
 using Core.Entities.Units;
 
@@ -28,6 +29,7 @@ namespace WpfPresentation.Engine
         private readonly BattleStateSnapshotService _snapshotService;
         private readonly BattleSave _initialSnapshot;
         private List<BattleEvent> _lastEvents = new();
+        private readonly UnitRenumberer _unitRenumberer = new();
 
         public int Score1 => _score1;
         public int Score2 => _score2;
@@ -264,27 +266,7 @@ namespace WpfPresentation.Engine
 
         private void RenumberArmy(IArmy army, bool isArmy1)
         {
-            var alive = army.Units.Where(u => u.IsAlive).ToList();
-            bool isWall = _formation is WallFormation;
-
-            if (isArmy1 && !isWall)
-            {
-                for (int i = 0; i < alive.Count; i++)
-                {
-                    var unit = alive[alive.Count - 1 - i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
-            else
-            {
-                for (int i = 0; i < alive.Count; i++)
-                {
-                    var unit = alive[i];
-                    var unitType = unit.Name.Split(' ')[0];
-                    unit.Name = $"{unitType} {i + 1}";
-                }
-            }
+            _unitRenumberer.Renumber(army, isArmy1, _formation);
         }
 
         private void AttachDeathObserver()

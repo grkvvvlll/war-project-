@@ -10,7 +10,6 @@ namespace WpfPresentation.Views
         public event Action? NewGameRequested;
         public event Action? LoadGameRequested;
         public event Action? HelpRequested;
-        public event Action? ObserversRequested;
         public event Action? ExitRequested;
 
         public MainMenuView()
