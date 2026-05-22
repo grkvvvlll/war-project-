@@ -1,0 +1,144 @@
+﻿<Window x:Class="WpfPresentation.Views.SaveGameWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Width="360" Height="200"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+
+    <Border Background="#2C2C2A"
+            BorderBrush="#5F5E5A"
+            BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- Шапка -->
+            <Border Grid.Row="0"
+                    Background="#252523"
+                    BorderBrush="#444441"
+                    BorderThickness="0,0,0,1"
+                    Padding="16,10"
+                    MouseLeftButtonDown="Header_MouseDown">
+                <TextBlock Text="СОХРАНЕНИЕ ИГРЫ"
+                           FontFamily="Georgia" FontSize="12"
+                           Foreground="#888780"
+                           HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- Поле ввода -->
+            <StackPanel Grid.Row="1" Margin="20,16,20,12" VerticalAlignment="Center">
+                <TextBlock Text="Название сохранения"
+                           FontFamily="Georgia" FontSize="11"
+                           Foreground="#5F5E5A"
+                           Margin="0,0,0,6"/>
+
+                <!-- TextBox с подсказкой -->
+                <Grid>
+                    <TextBox x:Name="NameBox"
+                             FontFamily="Georgia" FontSize="13"
+                             Foreground="#D3D1C7"
+                             Background="#1E1E1C"
+                             BorderBrush="#5F5E5A"
+                             BorderThickness="1"
+                             Padding="8,6"
+                             CaretBrush="#FAC775"
+                             SelectionBrush="#33FAC775"
+                             TextChanged="NameBox_TextChanged"
+                             KeyDown="NameBox_KeyDown"/>
+                    <TextBlock x:Name="PlaceholderText"
+                               Text="Введите название..."
+                               FontFamily="Georgia" FontSize="13"
+                               Foreground="#444441"
+                               Padding="10,6"
+                               IsHitTestVisible="False"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </StackPanel>
+
+            <!-- Кнопки -->
+            <Grid Grid.Row="2" Margin="20,0,20,16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button x:Name="SaveButton"
+                        Grid.Column="0"
+                        Content="Сохранить"
+                        Height="36"
+                        FontFamily="Georgia" FontSize="13"
+                        Foreground="#FAC775"
+                        Cursor="Hand"
+                        Click="SaveButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd"
+                                                Background="Transparent"
+                                                BorderBrush="#888780"
+                                                BorderThickness="1">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#33FAC775"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#FAC775"/>
+                                            </Trigger>
+                                            <Trigger Property="IsPressed" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#55FAC775"/>
+                                            </Trigger>
+                                            <Trigger Property="IsEnabled" Value="False">
+                                                <Setter TargetName="Bd" Property="Opacity" Value="0.4"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+
+                <Button x:Name="CancelButton"
+                        Grid.Column="2"
+                        Content="Отмена"
+                        Height="36"
+                        FontFamily="Georgia" FontSize="13"
+                        Foreground="#888780"
+                        Cursor="Hand"
+                        Click="CancelButton_Click">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border x:Name="Bd"
+                                                Background="Transparent"
+                                                BorderBrush="#444441"
+                                                BorderThickness="1">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Bd" Property="Background" Value="#22D3D1C7"/>
+                                                <Setter TargetName="Bd" Property="BorderBrush" Value="#5F5E5A"/>
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </Button.Style>
+                </Button>
+            </Grid>
+        </Grid>
+    </Border>
+</Window>

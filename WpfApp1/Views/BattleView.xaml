@@ -1,0 +1,179 @@
+﻿<UserControl x:Class="WpfPresentation.Views.BattleView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <Style x:Key="ActionButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="Georgia"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#22D3D1C7"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#44D3D1C7"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#2C2C2A">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="210"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- ЛЕВАЯ ЧАСТЬ: счёт + поле боя + лог -->
+        <Grid Grid.Column="0" Margin="16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="3*"/>
+                <RowDefinition Height="2*"/>
+            </Grid.RowDefinitions>
+
+            <!-- Счёт и раунд -->
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <TextBlock x:Name="Army1NameText" Text="Армия 1"
+                               FontFamily="Georgia" FontSize="14" Foreground="#FAC775"/>
+                    <TextBlock Text="  " FontSize="14"/>
+                    <TextBlock x:Name="Score1Text" Text="0"
+                               FontFamily="Georgia" FontSize="14" Foreground="#EF9F27"/>
+                </StackPanel>
+
+                <TextBlock Grid.Column="1" x:Name="RoundText" Text="ХОД 1"
+                           FontSize="11" Foreground="#5F5E5A"
+                           HorizontalAlignment="Center" VerticalAlignment="Center"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
+                    <TextBlock x:Name="Score2Text" Text="0"
+                               FontFamily="Georgia" FontSize="14" Foreground="#EF9F27"/>
+                    <TextBlock Text="  " FontSize="14"/>
+                    <TextBlock x:Name="Army2NameText" Text="Армия 2"
+                               FontFamily="Georgia" FontSize="14" Foreground="#FAC775"/>
+                </StackPanel>
+            </Grid>
+
+            <Rectangle Grid.Row="0" Height="1" Fill="#444441" VerticalAlignment="Bottom"/>
+
+            <!-- Поле боя -->
+            <Border Grid.Row="1" BorderBrush="#3A3A38" BorderThickness="1"
+                    Background="#252523" Margin="0,12,0,0">
+                <Viewbox Stretch="Uniform">
+                    <Canvas x:Name="BattleCanvas"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                </Viewbox>
+            </Border>
+
+            <!-- Лог событий -->
+            <Border Grid.Row="2" BorderBrush="#3A3A38" BorderThickness="1"
+                    Background="#1E1E1C" Margin="0,8,0,0">
+                <ScrollViewer x:Name="LogScroller"
+                              VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              Padding="8">
+                    <StackPanel x:Name="LogPanel"/>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <!-- ПРАВАЯ ПАНЕЛЬ: кнопки -->
+        <Grid Grid.Column="1" Margin="0,16,16,16">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0" Margin="0,0,0,16">
+                <TextBlock Text="ДЕЙСТВИЯ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,10"/>
+
+                <Button x:Name="NextRoundButton" Content="Сделать ход"
+                        Foreground="#FAC775" BorderBrush="#888780"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="UndoButton" Content="Undo"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="RedoButton" Content="Redo"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="ResetButton" Content="Сброс в исходное состояние"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="ArmyCompositionButton" Content="Состав армий"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+
+                <Button x:Name="ChangeFormationButton" Content="Изменить построение"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,0"/>
+
+                <!-- Выпадающая панель построений -->
+                <Border x:Name="FormationPanel"
+                        BorderBrush="#444441" BorderThickness="1"
+                        Background="#252523"
+                        Padding="10" Margin="0,2,0,8"
+                        Visibility="Collapsed">
+                    <StackPanel>
+                        <TextBlock Text="ПОСТРОЕНИЕ" FontSize="11" Foreground="#5F5E5A" Margin="0,0,0,8"/>
+                        <Button x:Name="Formation1Button" Content="Бой на мосту"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="Formation2Button" Content="Широкий мост"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="Formation3Button" Content="Стенка на стенку"
+                                Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                                Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,6"/>
+                        <Button x:Name="CancelFormationButton" Content="Отмена"
+                                Foreground="#888780" BorderBrush="#444441"
+                                Style="{StaticResource ActionButtonStyle}"/>
+                    </StackPanel>
+                </Border>
+
+                <Button x:Name="AutoModeButton" Content="Авторежим"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}"/>
+            </StackPanel>
+
+
+            <StackPanel Grid.Row="2">
+                <Button x:Name="SaveButton" Content="Сохранить"
+                        Foreground="#D3D1C7" BorderBrush="#5F5E5A"
+                        Style="{StaticResource ActionButtonStyle}" Margin="0,0,0,8"/>
+                <Button x:Name="ExitButton" Content="Выйти без сохранения"
+                        Foreground="#888780" BorderBrush="#444441"
+                        Style="{StaticResource ActionButtonStyle}"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

@@ -1,0 +1,130 @@
+﻿<UserControl x:Class="WpfPresentation.Views.ArmyPreviewView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="Georgia"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#22D3D1C7"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#44D3D1C7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#2C2C2A">
+        <ScrollViewer VerticalScrollBarVisibility="Auto"
+                  HorizontalScrollBarVisibility="Disabled">
+            <StackPanel Width="620"
+                    HorizontalAlignment="Center"
+                    Margin="0,30,0,30">
+                <!-- Заголовок -->
+            <TextBlock Text="Армии сформированы"
+                       FontFamily="Georgia"
+                       FontSize="28"
+                       Foreground="#FAC775"
+                       HorizontalAlignment="Center"/>
+
+            <Rectangle Height="1" Fill="#EF9F27" Width="80"
+                       HorizontalAlignment="Center" Margin="0,12,0,24"/>
+
+            <!-- Две армии -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="16"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Армия 1 -->
+                <Border Grid.Column="0"
+                        BorderBrush="#5F5E5A"
+                        BorderThickness="1"
+                        Padding="16">
+                    <StackPanel>
+                        <TextBlock x:Name="Army1Title"
+                                   Text="Армия 1"
+                                   FontFamily="Georgia"
+                                   FontSize="14"
+                                   Foreground="#FAC775"
+                                   Margin="0,0,0,8"/>
+                        <Rectangle Height="1" Fill="#444441" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="Army1Budget"
+                                   Text="Бюджет: 300 монет"
+                                   FontSize="12"
+                                   Foreground="#888780"
+                                   Margin="0,0,0,10"/>
+                        <ItemsControl x:Name="Army1List"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Армия 2 -->
+                <Border Grid.Column="2"
+                        BorderBrush="#5F5E5A"
+                        BorderThickness="1"
+                        Padding="16">
+                    <StackPanel>
+                        <TextBlock x:Name="Army2Title"
+                                   Text="Армия 2"
+                                   FontFamily="Georgia"
+                                   FontSize="14"
+                                   Foreground="#FAC775"
+                                   Margin="0,0,0,8"/>
+                        <Rectangle Height="1" Fill="#444441" Margin="0,0,0,8"/>
+                        <TextBlock x:Name="Army2Budget"
+                                   Text="Бюджет: 300 монет"
+                                   FontSize="12"
+                                   Foreground="#888780"
+                                   Margin="0,0,0,10"/>
+                        <ItemsControl x:Name="Army2List"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Кнопки -->
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        Content="← Назад"
+                        Foreground="#888780"
+                        BorderBrush="#444441"
+                        Style="{StaticResource NavButtonStyle}"
+                        x:Name="BackButton"/>
+
+                <Button Grid.Column="2"
+                        Content="Начать бой →"
+                        Foreground="#FAC775"
+                        BorderBrush="#888780"
+                        Style="{StaticResource NavButtonStyle}"
+                        x:Name="StartBattleButton"/>
+            </Grid>
+
+        </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

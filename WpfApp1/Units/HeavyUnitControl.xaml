@@ -1,0 +1,64 @@
+﻿<UserControl x:Class="WpfPresentation.Views.Units.HeavyUnitControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Width="48" Height="72">
+
+    <UserControl.Resources>
+        <Storyboard x:Key="AttackAnim">
+            <DoubleAnimation Storyboard.TargetName="Root"
+                             Storyboard.TargetProperty="(UIElement.RenderTransform).(TranslateTransform.X)"
+                             From="0" To="10" Duration="0:0:0.15" AutoReverse="True"/>
+        </Storyboard>
+        <Storyboard x:Key="HitAnim">
+            <ColorAnimation Storyboard.TargetName="Root"
+                    Storyboard.TargetProperty="Background.(SolidColorBrush.Color)"
+                    To="#33E24B4A" Duration="0:0:0.1"
+                    AutoReverse="True"/>
+        </Storyboard>
+        <Storyboard x:Key="DeathAnim">
+            <DoubleAnimation Storyboard.TargetName="Root"
+                             Storyboard.TargetProperty="Opacity"
+                             From="1" To="0" Duration="0:0:0.5"/>
+        </Storyboard>
+    </UserControl.Resources>
+
+    <Canvas x:Name="Root" Width="48" Height="72" Background="Transparent">
+        <Canvas.RenderTransform>
+            <TranslateTransform X="0" Y="0"/>
+        </Canvas.RenderTransform>
+        <Canvas.Resources>
+            <SolidColorBrush x:Name="StrokeColor" x:Key="StrokeBrush" Color="#B4B2A9"/>
+        </Canvas.Resources>
+
+        <!-- Шлем -->
+        <Path Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5" Fill="Transparent"
+              Data="M15,10 Q15,2 24,2 Q33,2 33,10 L33,15 L15,15 Z"/>
+
+        <!-- Голова в шлеме -->
+        <Rectangle Canvas.Left="17" Canvas.Top="10" Width="14" Height="10"
+                   RadiusX="2" RadiusY="2"
+                   Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5" Fill="Transparent"/>
+
+        <!-- Кольчуга -->
+        <Rectangle Canvas.Left="14" Canvas.Top="20" Width="20" Height="20"
+                   RadiusX="2" RadiusY="2"
+                   Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5" Fill="Transparent"/>
+        <!-- Решётка -->
+        <Line X1="14" Y1="27" X2="34" Y2="27" Stroke="{StaticResource StrokeBrush}" StrokeThickness="0.8"/>
+        <Line X1="14" Y1="33" X2="34" Y2="33" Stroke="{StaticResource StrokeBrush}" StrokeThickness="0.8"/>
+        <Line X1="21" Y1="20" X2="21" Y2="40" Stroke="{StaticResource StrokeBrush}" StrokeThickness="0.8"/>
+        <Line X1="27" Y1="20" X2="27" Y2="40" Stroke="{StaticResource StrokeBrush}" StrokeThickness="0.8"/>
+
+        <!-- Руки -->
+        <Line X1="14" Y1="24" X2="6" Y2="34" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2"/>
+        <Line X1="34" Y1="24" X2="42" Y2="34" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2"/>
+
+        <!-- Меч -->
+        <Line X1="42" Y1="34" X2="46" Y2="20" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2"/>
+        <Line X1="40" Y1="28" X2="48" Y2="28" Stroke="{StaticResource StrokeBrush}" StrokeThickness="1.5"/>
+
+        <!-- Ноги -->
+        <Line X1="19" Y1="40" X2="15" Y2="58" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2"/>
+        <Line X1="29" Y1="40" X2="33" Y2="58" Stroke="{StaticResource StrokeBrush}" StrokeThickness="2"/>
+    </Canvas>
+</UserControl>

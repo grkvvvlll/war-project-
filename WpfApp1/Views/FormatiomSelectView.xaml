@@ -1,0 +1,231 @@
+﻿<UserControl x:Class="WpfPresentation.Views.FormationSelectView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <UserControl.Resources>
+        <SolidColorBrush x:Key="BackgroundBrush" Color="#2C2C2A"/>
+        <SolidColorBrush x:Key="GoldBrush" Color="#FAC775"/>
+        <SolidColorBrush x:Key="GoldDarkBrush" Color="#EF9F27"/>
+        <SolidColorBrush x:Key="TextPrimaryBrush" Color="#D3D1C7"/>
+        <SolidColorBrush x:Key="TextMutedBrush" Color="#888780"/>
+        <SolidColorBrush x:Key="BorderActiveBrush" Color="#888780"/>
+        <SolidColorBrush x:Key="BorderMutedBrush" Color="#5F5E5A"/>
+        <SolidColorBrush x:Key="BorderDimBrush" Color="#444441"/>
+        <SolidColorBrush x:Key="CardSelectedBrush" Color="#1AFAC775"/>
+
+        <Style x:Key="NavButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontFamily" Value="Georgia"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="Height" Value="42"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="Transparent"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="1">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#22D3D1C7"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#44D3D1C7"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid Background="#2C2C2A">
+        <StackPanel Width="560"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+
+            <!-- Заголовок -->
+            <TextBlock Text="Выбор построения"
+                       FontFamily="Georgia"
+                       FontSize="28"
+                       Foreground="#FAC775"
+                       HorizontalAlignment="Center"/>
+
+            <Rectangle Height="1" Fill="#EF9F27" Width="80"
+                       HorizontalAlignment="Center" Margin="0,12,0,28"/>
+
+            <!-- Карточки -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Бой на мосту -->
+                <Border x:Name="Card1"
+                        Grid.Column="0"
+                        BorderThickness="1"
+                        BorderBrush="#888780"
+                        Background="#1AFAC775"
+                        Padding="16"
+                        Cursor="Hand"
+                        MouseLeftButtonDown="Card1_Click">
+                    <StackPanel>
+                        <TextBlock Text="⚔"
+                                   FontSize="22"
+                                   Foreground="#FAC775"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock Text="Бой на мосту"
+                                   FontFamily="Georgia"
+                                   FontSize="13"
+                                   Foreground="#FAC775"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock Text="Одна колонна юнитов. Бьются фронтовые юниты."
+                                   FontSize="11"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   LineHeight="18"
+                                   Margin="0,0,0,12"/>
+                        <TextBlock FontFamily="Courier New"
+                                   FontSize="12"
+                                   Foreground="#B4B2A9"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   LineHeight="20">
+                            х х х х х<LineBreak/>
+                            <LineBreak/>
+                            х х х х х
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Широкий мост -->
+                <Border x:Name="Card2"
+                        Grid.Column="2"
+                        BorderThickness="1"
+                        BorderBrush="#5F5E5A"
+                        Background="Transparent"
+                        Padding="16"
+                        Cursor="Hand"
+                        MouseLeftButtonDown="Card2_Click">
+                    <StackPanel>
+                        <TextBlock Text="⚔"
+                                   FontSize="22"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock x:Name="Card2Title"
+                                   Text="Широкий мост"
+                                   FontFamily="Georgia"
+                                   FontSize="13"
+                                   Foreground="#D3D1C7"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock Text="3 ряда юнитов. Фронт бьётся попарно по рядам."
+                                   FontSize="11"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   LineHeight="18"
+                                   Margin="0,0,0,12"/>
+                        <TextBlock FontFamily="Courier New"
+                                    FontSize="12"
+                                    Foreground="#B4B2A9"
+                                    HorizontalAlignment="Center"
+                                    TextAlignment="Center"
+                                    LineHeight="20">
+                            х х х&#x2003;&#x2003;х х х<LineBreak/>
+                            х х х&#x2003;&#x2003;х х х<LineBreak/>
+                            х х х&#x2003;&#x2003;х х х
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+
+                <!-- Стенка на стенку -->
+                <Border x:Name="Card3"
+                        Grid.Column="4"
+                        BorderThickness="1"
+                        BorderBrush="#5F5E5A"
+                        Background="Transparent"
+                        Padding="16"
+                        Cursor="Hand"
+                        MouseLeftButtonDown="Card3_Click">
+                    <StackPanel>
+                        <TextBlock Text="⚔"
+                                   FontSize="22"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   Margin="0,0,0,8"/>
+                        <TextBlock x:Name="Card3Title"
+                                   Text="Стенка на стенку"
+                                   FontFamily="Georgia"
+                                   FontSize="13"
+                                   Foreground="#D3D1C7"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   Margin="0,0,0,10"/>
+                        <TextBlock Text="Одна колонна, бьются попарно по рядам."
+                                   FontSize="11"
+                                   Foreground="#888780"
+                                   HorizontalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   TextAlignment="Center"
+                                   LineHeight="18"
+                                   Margin="0,0,0,12"/>
+                        <TextBlock FontFamily="Courier New"
+                                   FontSize="12"
+                                   Foreground="#B4B2A9"
+                                   HorizontalAlignment="Center"
+                                   TextAlignment="Center"
+                                   LineHeight="20">
+                            х&#x2003;&#x2003;&#x2003;х<LineBreak/>
+                            х&#x2003;&#x2003;&#x2003;х<LineBreak/>
+                            х&#x2003;&#x2003;&#x2003;х<LineBreak/>
+                            х&#x2003;&#x2003;&#x2003;х
+                        </TextBlock>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Кнопки навигации -->
+            <Grid Margin="0,20,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="12"/>
+                    <ColumnDefinition Width="2*"/>
+                </Grid.ColumnDefinitions>
+
+                <Button Grid.Column="0"
+                        Content="← Назад"
+                        Foreground="#888780"
+                        BorderBrush="#444441"
+                        Style="{StaticResource NavButtonStyle}"
+                        x:Name="BackButton"/>
+
+                <Button Grid.Column="2"
+                        Content="Далее →"
+                        Foreground="#FAC775"
+                        BorderBrush="#888780"
+                        Style="{StaticResource NavButtonStyle}"
+                        x:Name="NextButton"/>
+            </Grid>
+
+        </StackPanel>
+    </Grid>
+</UserControl>
