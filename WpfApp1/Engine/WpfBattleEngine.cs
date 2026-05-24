@@ -9,6 +9,7 @@ using Services.Storage;
 using Services.UI;
 using Core.Entities.Buffs;
 using Core.Entities.Units;
+using System.IO;
 
 namespace WpfPresentation.Engine
 {
@@ -59,7 +60,8 @@ namespace WpfPresentation.Engine
             _army1Turn = _random.Next(0, 2) == 0;
             _snapshotService = new BattleStateSnapshotService(_random);
             _initialSnapshot = CaptureSnapshot("Начальное состояние");
-            AttachDeathObserver();
+            ClearDamageLog();
+            AttachObservers();
         }
 
         // Resume from a saved game
@@ -82,7 +84,7 @@ namespace WpfPresentation.Engine
             _score2 = resume.ScoreArmy2;
             _snapshotService = new BattleStateSnapshotService(_random);
             _initialSnapshot = CaptureSnapshot("Начальное состояние");
-            AttachDeathObserver();
+            AttachObservers();
         }
 
         public void SetFormation(IBattleFormation formation)
@@ -227,7 +229,7 @@ namespace WpfPresentation.Engine
 
         private void ApplySnapshot(BattleSave snapshot)
         {
-            DetachDeathObserver();
+            DetachObservers();
             var restored = _snapshotService.Restore(snapshot);
             _army1 = restored.Army1;
             _army2 = restored.Army2;
@@ -237,7 +239,7 @@ namespace WpfPresentation.Engine
             _score2 = restored.ScoreArmy2;
             SetFormation(restored.Formation);
             _logger.SetArmies(_army1, _army2);
-            AttachDeathObserver();
+            AttachObservers();
         }
 
         private static string GetFormationName(IBattleFormation formation)
@@ -269,20 +271,39 @@ namespace WpfPresentation.Engine
             _unitRenumberer.Renumber(army, isArmy1, _formation);
         }
 
-        private void AttachDeathObserver()
+        private void AttachObservers()
         {
             foreach (var unit in _army1.Units)
+            {
                 ObserverRegistry.DeathObserver.Subscribe(unit);
+                ObserverRegistry.HealthObserver.Subscribe(unit);
+            }
             foreach (var unit in _army2.Units)
+            {
                 ObserverRegistry.DeathObserver.Subscribe(unit);
+                ObserverRegistry.HealthObserver.Subscribe(unit);
+            }
         }
 
-        private void DetachDeathObserver()
+        private void DetachObservers()
         {
             foreach (var unit in _army1.Units)
+            {
                 ObserverRegistry.DeathObserver.Unsubscribe(unit);
+                ObserverRegistry.HealthObserver.Unsubscribe(unit);
+            }
             foreach (var unit in _army2.Units)
+            {
                 ObserverRegistry.DeathObserver.Unsubscribe(unit);
+                ObserverRegistry.HealthObserver.Unsubscribe(unit);
+            }
+        }
+
+        private static void ClearDamageLog()
+        {
+            string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "damage-log.txt");
+            if (File.Exists(logPath))
+                File.WriteAllText(logPath, string.Empty);
         }
 
         private bool HasAlive(IArmy army) => army.Units.Any(u => u.IsAlive);

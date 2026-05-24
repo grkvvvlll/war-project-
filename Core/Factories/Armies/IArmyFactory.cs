@@ -2,6 +2,7 @@
 
 namespace Core.Factories.Armies
 {
+    // абстракт
     public interface IArmyFactory
     {
         string FactoryName { get; }

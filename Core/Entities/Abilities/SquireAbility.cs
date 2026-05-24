@@ -27,17 +27,8 @@ namespace Core.Entities.Abilities
         {
             if (!isAlly || !target.IsAlive) return false;
 
-            // Проверяем, является ли цель HeavyUnit (или декоратором вокруг него)
+            // Проверяем, является ли цель HeavyUnit 
             if (!IsHeavyUnit(target)) return false;
-
-            // Проверяем доступные слоты и дубликаты
-            // Мы не знаем заранее, какой бафф выберем, поэтому проверка "можно ли надеть ХОТЯ БЫ ОДИН бафф"
-            // делается здесь. Конкретная проверка на дубликат конкретного баффа будет при использовании (Use),
-            // так как там мы выбираем случайный бафф.
-
-            // Но для CanTarget достаточно знать, что есть место ИЛИ есть уникальные баффы, которые можно надеть.
-            // Упростим: если на юните меньше 4 баффов, теоретически можно надеть что-то новое.
-            // Точная проверка типа баффа будет внутри Use.
 
             int currentBuffCount = GetBuffCount(target);
             return currentBuffCount < 4;
@@ -93,7 +84,7 @@ namespace Core.Entities.Abilities
 
             if (!availableBuffs.Any())
             {
-                // Все возможные уникальные баффы уже надеты (даже если слотов < 4, но типов всего 4)
+                // Все возможные баффы уже надеты 
                 this.LastAppliedUnit = null;
                 return;
             }
@@ -101,7 +92,6 @@ namespace Core.Entities.Abilities
             // Выбираем случайный из доступных
             var chosen = availableBuffs[_random.Next(0, availableBuffs.Count)];
 
-            // Создаем новый декорированный юнит
             var newBuffedUnit = chosen.Creator(target);
 
             this.LastAppliedUnit = newBuffedUnit;

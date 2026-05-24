@@ -9,6 +9,7 @@ using Core.Formations;
 namespace Services.Storage
 {
     public class BattleSaveService
+        // Singletone
     {
         private static readonly BattleSaveService _instance = new BattleSaveService();
         public static BattleSaveService Instance => _instance;

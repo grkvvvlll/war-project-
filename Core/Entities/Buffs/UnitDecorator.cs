@@ -2,25 +2,24 @@
 
 namespace Core.Entities.Buffs
 {
-    public abstract class UnitDecorator : IUnit
+    public abstract class UnitDecorator : IUnit // наследует IUnit
     {
-        protected readonly IUnit _unit;
+        protected readonly IUnit _unit; // собственный IUnit
         protected readonly IBuff _buff;
-        private bool _isBroken = false;
-        public IBuff? BrokenBuff { get; private set; }
+        private bool _isBroken = false; // слетел ли 
+        public IBuff? BrokenBuff { get; private set; } // какой
 
         public UnitDecorator(IUnit unit, IBuff buff)
         {
-            _unit = unit;
-            _buff = buff;
+            _unit = unit; // кого обернули
+            _buff = buff; // какой бафф
         }
 
-        // НОВОЕ: Формируем красивое имя со списком всех баффов
+        // формируем имя со списком всех баффов
         public string Name
         {
             get
             {
-                // 1. Находим самый внутренний (базовый) юнит, чтобы взять его "чистое" имя без скобок
                 IUnit root = this;
                 while (root is UnitDecorator decorator)
                 {
@@ -28,19 +27,17 @@ namespace Core.Entities.Buffs
                 }
                 string baseName = root.Name;
 
-                // 2. Собираем все баффы в цепочке
+                // Собираем все баффы в цепочке
                 var allBuffs = GetAllBuffsList();
 
                 if (!allBuffs.Any())
                     return baseName;
 
-                // 3. Формируем красивый список: "с Бафф1, с Бафф2"
                 string buffsString = string.Join(", ", allBuffs.Select(b => $"с {b.NameInstrumental}"));
                 return $"{baseName} ({buffsString})";
             }
             set
             {
-                // Пропускаем присваивание до базового юнита, чтобы не ломать цепочку
                 IUnit root = this;
                 while (root is UnitDecorator decorator)
                 {
@@ -73,7 +70,6 @@ namespace Core.Entities.Buffs
 
         public void TakeDamage(int damage)
         {
-            // Передаём урон напрямую базовому юниту, минуя промежуточные декораторы
             IUnit inner = _unit;
             while (inner is UnitDecorator innerDec)
                 inner = innerDec.GetInnerUnit();
@@ -110,7 +106,7 @@ namespace Core.Entities.Buffs
             return _isBroken;
         }
 
-        // Возвращает список всех баффов в цепочке (от внешнего к внутреннему)
+        // Возвращает список всех баффов в цепочке 
         public List<IBuff> GetAllBuffsList()
         {
             var buffs = new List<IBuff>();
@@ -123,7 +119,6 @@ namespace Core.Entities.Buffs
             return buffs;
         }
 
-        // Возвращает HashSet типов баффов (для проверки дубликатов)
         public HashSet<string> GetAllBuffTypes()
         {
             var types = new HashSet<string>();

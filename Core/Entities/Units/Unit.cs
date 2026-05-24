@@ -14,13 +14,14 @@ namespace Core.Entities.Units
         public virtual bool IsAlive => Health > 0;
         public ISpecialAbility? SpecialAbility { get; protected set; }
 
+        // публикация событий
         public event Action<IUnit, int, int>? HealthChanged;
         public event Action<IUnit>? Died;
 
         protected virtual void OnHealthChanged(int oldHp, int newHp)
         {
             if (oldHp != newHp)
-                HealthChanged?.Invoke(this, oldHp, newHp);
+                HealthChanged?.Invoke(this, oldHp, newHp); // публикует событие
         }
 
         protected virtual void OnDied()

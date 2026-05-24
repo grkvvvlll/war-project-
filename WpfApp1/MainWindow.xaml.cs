@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using System.Windows;
 using Core.Interfaces;
-using Services.Observers;
+using Services.Commands;
 using Services.Random;
 using Services.Storage;
 using Services.UI;
@@ -24,14 +24,25 @@ namespace WpfPresentation
         private int _budget;
         private WpfBattleEngine? _engine;
         private readonly UnitRenumberer _unitRenumberer = new();
+        // Инвокер для команд без undo (навигация, диалоги)
+        private readonly SimpleCommandInvoker _simpleInvoker = new();
 
         private void ShowMainMenu()
         {
             var menu = new MainMenuView();
-            menu.NewGameRequested += ShowNewGame;
-            menu.LoadGameRequested += ShowLoadGame;
-            menu.HelpRequested += ShowHelp;
-            menu.ExitRequested += () => Application.Current.Shutdown();
+
+            // Кнопки главного меню — все через Command (SimpleCommandInvoker)
+            menu.NewGameRequested += () => _simpleInvoker.Execute(
+                new ActionGameCommand("Новая игра", ShowNewGame, () => { }));
+
+            menu.LoadGameRequested += ShowLoadGame; // исключено из Command 
+
+            menu.HelpRequested += () => _simpleInvoker.Execute(
+                new ActionGameCommand("Помощь", ShowHelp, () => { }));
+
+            menu.ExitRequested += () => _simpleInvoker.Execute(
+                new ActionGameCommand("Выход", () => Application.Current.Shutdown(), () => { }));
+
             MainContent.Content = menu;
         }
 
@@ -117,15 +128,20 @@ namespace WpfPresentation
 
         private void WireBattleView(BattleView battleView)
         {
+            // Undoable — идут через CommandHistory внутри WpfBattleEngine
             battleView.NextRoundRequested += OnNextRound;
             battleView.UndoRequested += OnUndo;
             battleView.RedoRequested += OnRedo;
             battleView.ResetRequested += OnReset;
-            battleView.SaveRequested += OnSave;
-            battleView.ArmyCompositionRequested += ShowArmyComposition;
-            battleView.AutoModeRequested += OnAutoMode;
-            battleView.ExitRequested += ShowMainMenu;
             battleView.FormationChangeRequested += OnFormationChangeRequested;
+
+            // Не undoable — идут через SimpleCommandInvoker
+            battleView.ArmyCompositionRequested += OnArmyComposition;
+            battleView.AutoModeRequested += OnAutoModeCommand;
+            battleView.ExitRequested += OnExitBattle;
+
+            // Исключено из Command 
+            battleView.SaveRequested += OnSave;
         }
 
         private void OnFormationChangeRequested(IBattleFormation formation)
@@ -172,10 +188,7 @@ namespace WpfPresentation
             _battleView.ClearLog();
             _battleView.NextRoundButton.IsEnabled = false;
 
-            bool deathBeepEnabled = ObserverRegistry.DeathObserver.IsEnabled;
-            ObserverRegistry.DeathObserver.IsEnabled = false;
             var events = _engine.ExecuteRoundCommand();
-            ObserverRegistry.DeathObserver.IsEnabled = deathBeepEnabled;
 
             foreach (var e in events)
             {
@@ -232,8 +245,6 @@ namespace WpfPresentation
                     case BattleEventType.Death:
                         _battleView.PlayDeath(e.TargetIsArmy1, e.TargetIndex, e.TargetName);
                         _battleView.DrawBattlefield();
-                        if (deathBeepEnabled && OperatingSystem.IsWindows())
-                            try { Console.Beep(1200, 300); } catch { }
                         break;
 
                     case BattleEventType.RoundEnd:
@@ -308,12 +319,33 @@ namespace WpfPresentation
             SyncBattleView();
         }
 
-        private void ShowArmyComposition()
+        private void OnArmyComposition()
         {
             if (_engine == null) return;
+            _simpleInvoker.Execute(new ActionGameCommand(
+                "Состав армий",
+                execute: () =>
+                {
+                    var window = new ArmyCompositionWindow(_engine.Army1, _engine.Army2, this);
+                    window.ShowDialog();
+                },
+                undo: () => { })); // показ диалога не отменяется
+        }
 
-            var window = new ArmyCompositionWindow(_engine.Army1, _engine.Army2, this);
-            window.ShowDialog();
+        private void OnExitBattle()
+        {
+            _simpleInvoker.Execute(new ActionGameCommand(
+                "Выход в главное меню",
+                execute: ShowMainMenu,
+                undo: () => { })); // навигация не отменяется
+        }
+
+        private void OnAutoModeCommand()
+        {
+            _simpleInvoker.Execute(new ActionGameCommand(
+                "Авторежим",
+                execute: OnAutoMode,   
+                undo: () => { }));
         }
 
         private void ShowBattleResult(string winner, int score1, int score2, int rounds)

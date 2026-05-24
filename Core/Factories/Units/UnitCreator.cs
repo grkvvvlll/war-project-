@@ -2,6 +2,7 @@
 
 namespace Core.Factories.Units
 {
+    // фабр метод
     public abstract class UnitCreator
     {
         // основной метод фабрики

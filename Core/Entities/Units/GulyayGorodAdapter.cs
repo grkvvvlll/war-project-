@@ -11,6 +11,7 @@ namespace Core.Entities.Units
             int health,
             int defence,
             int cost,
+            // из оригинальной библиотеки 
             GulyayGorod original)
             : base(name, 0, defence, health, cost)
         {
@@ -23,7 +24,7 @@ namespace Core.Entities.Units
             if (damage < 0) return;
 
             _original.ReduceHealth(damage);
-
+            // вызов оригинального объекта
             Health = _original.HasDestroyed ? 0 : _original.GetHealth();
         }
 
