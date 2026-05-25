@@ -54,6 +54,7 @@ namespace Core.Entities.Buffs
         public int MaxHealth => _unit.MaxHealth;
         public int Cost => _unit.Cost;
         public bool IsAlive => _unit.IsAlive;
+        public bool CanMeleeAttack => _unit.CanMeleeAttack;
 
         public ISpecialAbility? SpecialAbility => _unit.SpecialAbility;
         public event Action<IUnit, int, int>? HealthChanged

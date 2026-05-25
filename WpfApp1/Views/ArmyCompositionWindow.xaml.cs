@@ -92,7 +92,6 @@ namespace WpfPresentation.Views
             topRow.Children.Add(hpText);
             stack.Children.Add(topRow);
 
-            // HP-бар
             var hpBarOuter = new Border
             {
                 Height = 3,
@@ -108,7 +107,6 @@ namespace WpfPresentation.Views
                 RadiusX = 1,
                 RadiusY = 1,
             };
-            // Bind fill width relative to parent via a loaded event
             double fraction = hpFraction;
             hpBarFill.Loaded += (_, _) =>
             {

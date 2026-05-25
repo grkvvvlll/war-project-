@@ -1,5 +1,4 @@
 ﻿using Core.Entities;
-using Core.Entities.Buffs;
 using Core.Entities.Units;
 using Core.Interfaces;
 using Services.Storage;
@@ -14,12 +13,14 @@ namespace Services.Battle
     {
         public const string SavedAndStoppedResult = "Бой сохранён и остановлен";
         public const string StoppedWithoutSaveResult = "Бой остановлен без сохранения";
-        public const string DrawResult = "Ничья";  
+        public const string DrawResult = "Ничья";
 
         private readonly IMeleeService _meleeService;
-        private readonly SpecialAbilityService _specialAbilityService;
+        private readonly ISpecialAbilityService _specialAbilityService;
         private readonly IRandomService _random;
         private readonly IBattleLogger _logger;
+        private readonly BattleSaveService _saveService;
+        private readonly IBattleUI _ui;
         private IBattleFormation _formation;
 
         private int _scoreArmy1 = 0;
@@ -37,16 +38,20 @@ namespace Services.Battle
 
         public BattleField(
             IMeleeService meleeService,
-            SpecialAbilityService specialAbilityService,
+            ISpecialAbilityService specialAbilityService,
             IRandomService random,
             IBattleLogger logger,
-            IBattleFormation formation)
+            IBattleFormation formation,
+            BattleSaveService saveService,
+            IBattleUI ui)
         {
             _meleeService = meleeService;
             _specialAbilityService = specialAbilityService;
             _random = random;
             _logger = logger;
             _formation = formation;
+            _saveService = saveService;
+            _ui = ui;
         }
 
         public BattleResult StartBattle(
@@ -73,7 +78,7 @@ namespace Services.Battle
 
             bool currentArmy1Turn = army1Turn ?? (_random.Next(0, 2) == 0);
             var history = new CommandHistory();
-            var snapshotService = new BattleStateSnapshotService(_random);
+            var snapshotService = new BattleStateSnapshotService(_random, _saveService);
             var initialSnapshot = CaptureSnapshot("Начальное состояние");
 
             BattleSave CaptureSnapshot(string description)
@@ -96,8 +101,8 @@ namespace Services.Battle
 
             void ApplySnapshot(BattleSave snapshot)
             {
-                ObserverRegistry.Detach(army1);
-                ObserverRegistry.Detach(army2);
+                ObserverRegistry.Instance.Detach(army1);
+                ObserverRegistry.Instance.Detach(army2);
 
                 var restored = snapshotService.Restore(snapshot);
                 army1 = restored.Army1;
@@ -115,8 +120,8 @@ namespace Services.Battle
                         rec.Lines.Add(line);
                 }
 
-                ObserverRegistry.Attach(army1);
-                ObserverRegistry.Attach(army2);
+                ObserverRegistry.Instance.Attach(army1);
+                ObserverRegistry.Instance.Attach(army2);
             }
 
             void ResetToInitialState()
@@ -211,7 +216,7 @@ namespace Services.Battle
             while (HasAlive(army1) && HasAlive(army2))
             {
                 BattleVisualizer.PrintArmyLine(army1, army2, _formation);
-                Console.WriteLine();
+                _ui.PrintMessage("");
 
                 // проверяем, остались ли только Гуляй-города
                 if (IsOnlyGulyayGorodVsGulyayGorod(army1, army2))
@@ -333,194 +338,76 @@ namespace Services.Battle
         {
             while (true)
             {
-                int shownRound = turns + 1;
-                Console.WriteLine();
-                Console.WriteLine($"МЕНЮ (перед {shownRound}-м раундом)");
-                Console.WriteLine("Enter - следующий раунд");
-                Console.WriteLine("1 - показать состав армий");
-                Console.WriteLine("2 - сохранить и выйти в меню");
-                Console.WriteLine("3 - проиграть до конца");
-                Console.WriteLine("4 - выйти в меню без сохранения");
-                Console.WriteLine("5 - изменить построение армий");
-                Console.WriteLine("6 - Undo");
-                Console.WriteLine("7 - Redo");
-                Console.WriteLine("8 - сброс в исходное состояние");
-                Console.WriteLine("9 - показать историю действий");
-                Console.Write("Ваш выбор: ");
-                string input = (Console.ReadLine() ?? "").Trim();
-                if (string.IsNullOrEmpty(input))
-                    return true;
-                if (input == "1")
+                var choice = _ui.WaitForChoice(turns + 1);
+                switch (choice)
                 {
-                    PrintArmyState(army1, army2);
-                    continue;
+                    case RoundMenuChoice.NextRound:
+                        return true;
+                    case RoundMenuChoice.ShowArmyState:
+                        _ui.PrintArmyState(army1, army2); continue;
+                    case RoundMenuChoice.SaveAndExit:
+                        SaveBattle(army1, army2, turns, army1Turn); return false;
+                    case RoundMenuChoice.AutoMode:
+                        _autoMode = true; return true;
+                    case RoundMenuChoice.ExitWithoutSave:
+                        _exitWithoutSave = true; return false;
+                    case RoundMenuChoice.ChangeFormation:
+                        changeFormationCommand(); continue;
+                    case RoundMenuChoice.Undo:
+                        if (!history.CanUndo) _ui.PrintMessage("Undo недоступен.");
+                        else history.Undo();
+                        continue;
+                    case RoundMenuChoice.Redo:
+                        if (!history.CanRedo) _ui.PrintMessage("Redo недоступен.");
+                        else history.Redo();
+                        continue;
+                    case RoundMenuChoice.Reset:
+                        resetToInitialState(); continue;
+                    case RoundMenuChoice.ShowHistory:
+                        _ui.PrintHistory(history.Entries); continue;
+                    default:
+                        _ui.PrintMessage("Неизвестная команда."); continue;
                 }
-                if (input == "2")
-                {
-                    SaveBattle(army1, army2, turns, army1Turn);
-                    return false;
-                }
-                if (input == "3")
-                {
-                    _autoMode = true;
-                    return true;
-                }
-                if (input == "4")
-                {
-                    _exitWithoutSave = true;
-                    return false;
-                }
-                if (input == "5")
-                {
-                    changeFormationCommand();
-                    continue;
-                }
-                if (input == "6")
-                {
-                    if (!history.CanUndo)
-                        Console.WriteLine("Undo недоступен.");
-                    else
-                        history.Undo();
-                    continue;
-                }
-                if (input == "7")
-                {
-                    if (!history.CanRedo)
-                        Console.WriteLine("Redo недоступен.");
-                    else
-                        history.Redo();
-                    continue;
-                }
-                if (input == "8")
-                {
-                    resetToInitialState();
-                    continue;
-                }
-                if (input == "9")
-                {
-                    PrintHistory(history);
-                    continue;
-                }
-                Console.WriteLine("Неизвестная команда.");
             }
         }
-
-        private void PrintHistory(CommandHistory history)
-        {
-            Console.WriteLine();
-            Console.WriteLine("История действий:");
-
-            if (history.Entries.Count == 0)
-            {
-                Console.WriteLine("  История пуста.");
-                return;
-            }
-
-            for (int i = 0; i < history.Entries.Count; i++)
-                Console.WriteLine($"  {i + 1}. {history.Entries[i]}");
-        }
-
         private void SaveBattle(IArmy army1, IArmy army2, int turns, bool army1Turn)
         {
             if (_logger is not IRecordingBattleLogger rec)
             {
-                Console.WriteLine("Сохранение недоступно: логгер не поддерживает запись.");
+                _ui.PrintSaveFailed();
                 return;
             }
-            Console.Write("Введите название сохранения: ");
-            string saveName = (Console.ReadLine() ?? "").Trim();
-            var save = BattleSaveService.Instance.CreateInProgressSave(
-                army1,
-                army2,
-                turns,
-                army1Turn,
-                _scoreArmy1,
-                _scoreArmy2,
-                _formation,
-                rec.Lines,
-                saveName);
-            string fileName = BattleSaveService.Instance.Save(save, saveName);
-            Console.WriteLine($"Игра сохранена: {fileName}");
-        }
-
-        private void PrintArmyState(IArmy army1, IArmy army2)
-        {
-            Console.WriteLine();
-            Console.WriteLine($"Состав армии {army1.Name}:");
-            Thread.Sleep(30);
-            foreach (var unit in army1.Units)
-            {
-                // Явное форматирование вместо неявного ToString()
-                Console.WriteLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
-                Thread.Sleep(30);
-            }
-
-            Console.WriteLine();
-            Console.WriteLine($"Состав армии {army2.Name}:");
-            Thread.Sleep(30);
-            foreach (var unit in army2.Units)
-            {
-                Console.WriteLine($"  {unit.Name} (HP:{unit.Health}/{unit.MaxHealth}, ATK:{unit.Attack}, DEF:{unit.Defence})");
-                Thread.Sleep(30);
-            }
-            Console.WriteLine();
-            Thread.Sleep(30);
-        }
-
-        private void CleanAndLogBrokenBuffs(IArmy army, bool isArmy1)
-        {
-            // Проходим с конца, чтобы безопасно заменять элементы в списке
-            for (int i = army.Units.Count - 1; i >= 0; i--)
-            {
-                if (army.Units[i] is Core.Entities.Buffs.UnitDecorator decorator && decorator.BrokenBuff != null)
-                {
-                    string buffName = decorator.BrokenBuff.NameNominative; // "Шлем", "Конь" и т.д.
-                    string unitName = decorator.GetInnerUnit().Name;       // Имя юнита без этого баффа
-
-                    Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
-                    Console.Write($"💥{unitName} ");
-                    Console.ResetColor();
-                    Console.WriteLine($"потерял бафф {buffName}!");
-
-                    // Снимаем декоратор: заменяем его в армии на "голый" юнит внутри
-                    ((Core.Entities.Army)army).SetUnit(i, decorator.GetInnerUnit());
-                }
-            }
+            string saveName = _ui.ReadSaveName();
+            var save = _saveService.CreateInProgressSave(
+                army1, army2, turns, army1Turn,
+                _scoreArmy1, _scoreArmy2, _formation, rec.Lines, saveName);
+            string fileName = _saveService.Save(save, saveName);
+            _ui.PrintSaved(fileName);
         }
 
         public void SetFormation(IBattleFormation formation)
         {
             _formation = formation;
-            if (_meleeService is MeleeService ms) ms.SetFormation(formation);
+            _meleeService.SetFormation(formation);
             _specialAbilityService.SetFormation(formation);
         }
 
         private void ChangeFormation(IArmy army1, IArmy army2)
         {
-            Console.WriteLine("Выберите построение:");
-            Console.WriteLine("1. Бой на мосту");
-            Console.WriteLine("2. Бой на широком мосту");
-            Console.WriteLine("3. Стенка на стенку");
-            Console.Write("Ваш выбор: ");
-            var input = Console.ReadLine()?.Trim();
-
             var previousFormation = _formation;
+            var newFormation = _ui.ReadFormationChoice();
+            if (newFormation == null) { _ui.PrintMessage("Неверный ввод."); return; }
 
-            if (input == "1") SetFormation(new BridgeFormation());
-            else if (input == "2") SetFormation(new WideBridgeFormation());
-            else if (input == "3") SetFormation(new WallFormation());
-            else { Console.WriteLine("Неверный ввод."); return; }
+            SetFormation(newFormation);
 
-            // Если переключаемся между стенкой и мостом — разворачиваем армию 1
             bool wasWall = previousFormation is WallFormation;
             bool isWall = _formation is WallFormation;
             if (wasWall != isWall)
-                ((Core.Entities.Army)army1).ReverseUnits();
+                army1.ReverseUnits();
 
             RenumberArmy(army1, isArmy1: true);
             RenumberArmy(army2, isArmy1: false);
         }
-
         private void RenumberArmy(IArmy army, bool isArmy1)
         {
             var alive = army.Units.Where(u => u.IsAlive).ToList();

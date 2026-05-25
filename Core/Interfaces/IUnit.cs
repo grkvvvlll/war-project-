@@ -9,6 +9,7 @@
         int MaxHealth { get; }  // макс хп, чтобы оно не росло бесконечно
         int Cost { get; }
         bool IsAlive { get; }
+        bool CanMeleeAttack { get; }
         ISpecialAbility? SpecialAbility { get; }
         event Action<IUnit, int, int>? HealthChanged;
         event Action<IUnit>? Died;

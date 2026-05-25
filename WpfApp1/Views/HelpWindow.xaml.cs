@@ -19,7 +19,6 @@ namespace WpfPresentation.Views
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // Fade-out перед закрытием
             var anim = new System.Windows.Media.Animation.DoubleAnimation
             {
                 From = 1,

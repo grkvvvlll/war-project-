@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Core.Interfaces
 {
     public interface IRecordingBattleLogger : IBattleLogger

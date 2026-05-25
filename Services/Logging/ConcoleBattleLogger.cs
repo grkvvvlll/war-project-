@@ -1,6 +1,4 @@
-﻿using System;
-using System.Threading;
-using Core.Interfaces;
+﻿using Core.Interfaces;
 
 namespace Services.Logging
 {
@@ -12,7 +10,7 @@ namespace Services.Logging
             Thread.Sleep(30);
         }
 
-        public void Log(string message) 
+        public void Log(string message)
         {
             Console.ResetColor();
             SlowWrite(message);
@@ -26,6 +24,7 @@ namespace Services.Logging
 
         public void LogHeal(IUnit healer, IUnit target, int healedAmount, bool healerIsArmy1)
         {
+            Console.Write("💚 ");
             Console.ForegroundColor = healerIsArmy1 ? ConsoleColor.White : ConsoleColor.Red;
             Console.Write($"{healer.Name} ");
             Console.ResetColor();
@@ -137,6 +136,48 @@ namespace Services.Logging
             SlowWrite($"В армии {armyName} лучников нет.");
         }
 
-        public void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1) { }
+        public void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1)
+        {
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"{squire.Name} ");
+            Console.ResetColor();
+            Console.Write("добавил ");
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"{target.Name} ");
+            Console.ResetColor();
+            Console.WriteLine($"бафф: {buffName}");
+        }
+
+        public void LogBuffLost(IUnit unit, string buffName, bool attackerIsArmy1)
+        {
+            Console.ForegroundColor = attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
+            Console.Write($"{unit.Name} ");
+            Console.ResetColor();
+            Console.WriteLine($"💥 потерял бафф {buffName}!");
+        }
+
+        public void LogCloneChance(IUnit wizard, int chancePercent, bool isArmy1)
+        {
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write("Вероятность клонирования юнита магом - ");
+            Console.ResetColor();
+            Console.WriteLine($"{chancePercent}%.");
+        }
+
+        public void LogCloneFailed(IUnit wizard, int newChancePercent, bool isArmy1)
+        {
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"{wizard.Name} ");
+            Console.ResetColor();
+            Console.WriteLine($"никого не клонировал. Вероятность выросла до {newChancePercent}%");
+        }
+
+        public void LogCloneSuccess(IUnit wizard, string targetName, bool isArmy1)
+        {
+            Console.ForegroundColor = isArmy1 ? ConsoleColor.White : ConsoleColor.Red;
+            Console.Write($"✨ {wizard.Name} ");
+            Console.ResetColor();
+            Console.WriteLine($"склонировал {targetName}.");
+        }
     }
 }

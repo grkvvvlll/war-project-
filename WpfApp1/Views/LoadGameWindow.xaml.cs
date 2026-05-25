@@ -2,7 +2,6 @@
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Services.Random;
 using Services.Storage;
 
 namespace WpfPresentation.Views
@@ -11,16 +10,19 @@ namespace WpfPresentation.Views
     {
         public BattleSaveInfo? SelectedSave { get; private set; }
 
-        public LoadGameWindow(Window owner)
+        private readonly BattleSaveService _saveService;
+
+        public LoadGameWindow(Window owner, BattleSaveService saveService)
         {
             InitializeComponent();
             Owner = owner;
+            _saveService = saveService;
             PopulateList();
         }
 
         private void PopulateList()
         {
-            var saves = BattleSaveService.Instance.ListSaves();
+            var saves = _saveService.ListSaves();
 
             if (saves.Count == 0)
             {
@@ -42,7 +44,6 @@ namespace WpfPresentation.Views
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // Левая часть: название + мета
             var left = new StackPanel();
 
             var nameBlock = new TextBlock
@@ -76,7 +77,6 @@ namespace WpfPresentation.Views
             left.Children.Add(metaRow);
             Grid.SetColumn(left, 0);
 
-            // Правая часть: бейдж статуса
             Color badgeColor = isFinished
                 ? Color.FromRgb(0x5F, 0x5E, 0x5A)
                 : Color.FromRgb(0x1D, 0x9E, 0x75);

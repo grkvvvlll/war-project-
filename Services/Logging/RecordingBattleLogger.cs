@@ -1,5 +1,3 @@
-using System;
-using System.Collections.Generic;
 using Core.Interfaces;
 
 namespace Services.Logging
@@ -95,6 +93,30 @@ namespace Services.Logging
         {
             _inner.LogBuffAdded(squire, target, buffName, isArmy1);
             Add($"{squire.Name} вручает {target.Name} — {buffName}");
+        }
+
+        public void LogBuffLost(IUnit unit, string buffName, bool attackerIsArmy1)
+        {
+            _inner.LogBuffLost(unit, buffName, attackerIsArmy1);
+            Add($"{unit.Name} потерял бафф {buffName}!");
+        }
+
+        public void LogCloneChance(IUnit wizard, int chancePercent, bool isArmy1)
+        {
+            _inner.LogCloneChance(wizard, chancePercent, isArmy1);
+            Add($"Вероятность клонирования магом {wizard.Name}: {chancePercent}%");
+        }
+
+        public void LogCloneFailed(IUnit wizard, int newChancePercent, bool isArmy1)
+        {
+            _inner.LogCloneFailed(wizard, newChancePercent, isArmy1);
+            Add($"{wizard.Name} никого не клонировал. Вероятность выросла до {newChancePercent}%");
+        }
+
+        public void LogCloneSuccess(IUnit wizard, string targetName, bool isArmy1)
+        {
+            _inner.LogCloneSuccess(wizard, targetName, isArmy1);
+            Add($"✨ {wizard.Name} склонировал {targetName}.");
         }
     }
 }

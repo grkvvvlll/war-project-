@@ -1,6 +1,4 @@
-﻿using Core.Entities;
-using Core.Entities.Buffs;
-using Core.Entities.Units;
+﻿using Core.Entities.Buffs;
 using Core.Interfaces;
 
 namespace Services.Battle
@@ -38,7 +36,7 @@ namespace Services.Battle
                 var defender = defenderArmy.Units[dIdx];
 
                 if (!attacker.IsAlive || !defender.IsAlive) continue;
-                if (attacker is GulyayGorodAdapter) continue;
+                if (!attacker.CanMeleeAttack) continue;
 
                 int damage = _damageCalculator.CalculateDamage(attacker, defender);
                 int oldHp = defender.Health;
@@ -50,13 +48,9 @@ namespace Services.Battle
                 // Сразу показываем потерю баффа если слетел
                 if (defender is UnitDecorator dec && dec.BrokenBuff != null)
                 {
-                    string unitName = dec.GetInnerUnit().Name;
                     string buffName = dec.BrokenBuff.NameNominative;
-                    Console.ForegroundColor = attackerIsArmy1 ? ConsoleColor.Red : ConsoleColor.White;
-                    Console.Write($"{unitName} ");
-                    Console.ResetColor();
-                    Console.WriteLine($"💥 потерял бафф {buffName}!");
-                    ((Core.Entities.Army)defenderArmy).SetUnit(dIdx, dec.GetInnerUnit());
+                    defenderArmy.SetUnit(dIdx, dec.GetInnerUnit());
+                    _logger.LogBuffLost(dec.GetInnerUnit(), buffName, attackerIsArmy1);
                 }
 
                 if (!defender.IsAlive)

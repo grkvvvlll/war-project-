@@ -12,6 +12,7 @@ namespace Core.Entities.Units
         public int MaxHealth { get; protected set; }
         public int Cost { get; }
         public virtual bool IsAlive => Health > 0;
+        public virtual bool CanMeleeAttack => true;
         public ISpecialAbility? SpecialAbility { get; protected set; }
 
         // публикация событий

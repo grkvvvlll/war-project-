@@ -11,10 +11,12 @@ namespace Services.Storage
         };
 
         private readonly IRandomService _random;
+        private readonly BattleSaveService _saveService;
 
-        public BattleStateSnapshotService(IRandomService random)
+        public BattleStateSnapshotService(IRandomService random, BattleSaveService saveService)
         {
             _random = random;
+            _saveService = saveService;
         }
 
         public BattleSave Capture(
@@ -28,7 +30,7 @@ namespace Services.Storage
             IEnumerable<string> logLines,
             string description = "")
         {
-            var save = BattleSaveService.Instance.CreateInProgressSave(
+            var save = _saveService.CreateInProgressSave(
                 army1,
                 army2,
                 turns,
@@ -44,7 +46,7 @@ namespace Services.Storage
 
         public BattleResumeData Restore(BattleSave snapshot)
         {
-            return BattleSaveService.Instance.RestoreBattle(Clone(snapshot), _random);
+            return _saveService.RestoreBattle(Clone(snapshot), _random);
         }
 
         private static BattleSave Clone(BattleSave snapshot)

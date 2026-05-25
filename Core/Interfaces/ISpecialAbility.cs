@@ -19,5 +19,13 @@
 
         // Увеличение накопленной вероятности для мага
         void Charge();
+
+        /// <summary>
+        /// Полное выполнение способности: поиск цели, применение, логирование.
+        /// Возвращает очки (стоимость убитых юнитов), 0 если никто не погиб.
+        /// </summary>
+        int Execute(IUnit user, int userIndex,
+                    IArmy ownArmy, IArmy enemyArmy,
+                    bool isArmy1, IAbilityExecutionContext ctx);
     }
 }

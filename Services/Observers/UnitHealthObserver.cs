@@ -3,7 +3,7 @@ using Core.Interfaces;
 
 namespace Services.Observers
 {
-    public class UnitHealthObserver
+    public class UnitHealthObserver : IUnitObserver
     {
         private static readonly object _lock = new();
 
@@ -24,6 +24,15 @@ namespace Services.Observers
         public void Unsubscribe(IUnit unit)
         {
             unit.HealthChanged -= OnHealthChanged;
+        }
+
+        public void ClearLog()
+        {
+            lock (_lock)
+            {
+                Directory.CreateDirectory(_logDir);
+                File.WriteAllText(_logPath, string.Empty, System.Text.Encoding.UTF8);
+            }
         }
 
         private void OnHealthChanged(IUnit unit, int oldHp, int newHp)

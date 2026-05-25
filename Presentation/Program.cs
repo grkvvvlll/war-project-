@@ -1,6 +1,5 @@
 ﻿using Core.Factories;
 using Core.Factories.Armies;
-using Core.Factories.Units;
 using Core.Formations;
 using Core.Interfaces;
 using Services.ArmyBuilding;
@@ -9,6 +8,7 @@ using Services.Formation;
 using Services.Logging;
 using Services.Observers;
 using Services.Random;
+using Services.Storage;
 using Services.UI;
 
 namespace Presentation
@@ -27,21 +27,27 @@ namespace Presentation
             IBattleFormation formation = new BridgeFormation();
 
             IMeleeService meleeService = new MeleeService(damageCalculator, logger, formation);
-            SpecialAbilityService specialAbilityService = new SpecialAbilityService(logger, formation);
+            SpecialAbilityService specialAbilityService = new SpecialAbilityService(logger, randomService, formation);
+
+            var saveService = new BattleSaveService();
+            IBattleUI battleUI = new ConsoleBattleUI();
 
             IBattleField battleField = new BattleField(
                 meleeService,
                 specialAbilityService,
                 randomService,
                 logger,
-                formation);
+                formation,
+                saveService,
+                battleUI);
 
             // Создание фабрик и ArmyBuilder
             var unitCreatorFactory = new UnitCreatorFactory(randomService);
             var unitCreators = unitCreatorFactory.Create();
-            var autoFactory = new AutoArmyFactory(unitCreators);
+            var autoFactory = new AutoArmyFactory(unitCreators, randomService);
             var manualFactory = new ManualArmyFactory(unitCreators);
             var armyBuilder = new ArmyBuilder(autoFactory, manualFactory);
+            var manualArmySelector = new ManualArmySelector(manualFactory);
             var formationSelector = new FormationSelector();
             var logCleaner = new LogCleaner((RecordingBattleLogger)logger);
             var armyPrinter = new ArmyPrinter();
@@ -52,6 +58,8 @@ namespace Presentation
                 damageCalculator,
                 battleField,
                 armyBuilder,
+                manualArmySelector,
+                saveService,
                 formationSelector,
                 logCleaner,
                 armyPrinter,

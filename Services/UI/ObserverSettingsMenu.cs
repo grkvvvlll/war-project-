@@ -10,8 +10,8 @@ namespace Services.UI
             {
                 Console.Clear();
                 Console.WriteLine("=== Настройки наблюдателей ===");
-                Console.WriteLine($"1. Звук при смерти юнита: {(ObserverRegistry.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
-                Console.WriteLine($"2. Файловый лог изменений HP: {(ObserverRegistry.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine($"1. Звук при смерти юнита: {(ObserverRegistry.Instance.DeathObserver.IsEnabled ? "вкл" : "выкл")}");
+                Console.WriteLine($"2. Файловый лог изменений HP: {(ObserverRegistry.Instance.HealthObserver.IsEnabled ? "вкл" : "выкл")}");
                 Console.WriteLine();
                 Console.WriteLine("Наблюдатель 2 пишет только в logs/damage-log.txt.");
                 Console.WriteLine("Если он выключен, изменения HP в файл не добавляются.");
@@ -23,10 +23,10 @@ namespace Services.UI
                 switch ((Console.ReadLine() ?? "").Trim())
                 {
                     case "1":
-                        ObserverRegistry.DeathObserver.IsEnabled = !ObserverRegistry.DeathObserver.IsEnabled;
+                        ObserverRegistry.Instance.DeathObserver.IsEnabled = !ObserverRegistry.Instance.DeathObserver.IsEnabled;
                         break;
                     case "2":
-                        ObserverRegistry.HealthObserver.IsEnabled = !ObserverRegistry.HealthObserver.IsEnabled;
+                        ObserverRegistry.Instance.HealthObserver.IsEnabled = !ObserverRegistry.Instance.HealthObserver.IsEnabled;
                         break;
                     case "0":
                         return;

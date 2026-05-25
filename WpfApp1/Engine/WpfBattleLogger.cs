@@ -10,10 +10,6 @@ namespace WpfPresentation.Engine
         private IArmy? _army1;
         private IArmy? _army2;
 
-        /// <summary>
-        /// Должен вызываться перед первым раундом, чтобы логгер мог
-        /// находить реальный индекс юнита в армии для анимаций.
-        /// </summary>
         public void SetArmies(IArmy army1, IArmy army2)
         {
             _army1 = army1;
@@ -120,12 +116,11 @@ namespace WpfPresentation.Engine
 
         public void LogSpecial(IUnit user, IUnit target, string abilityName, int damage)
         {
-            // LogSpecial не получает isArmy1 в сигнатуре — определяем по принадлежности к армии
             int idxInArmy1 = FindInArmy(user, isArmy1: true);
             bool actorIsArmy1 = idxInArmy1 >= 0;
             int actorIndex = actorIsArmy1 ? idxInArmy1 : FindIndex(user, isArmy1: false);
 
-            // Цель может быть союзником (маг клонирует союзника) или врагом
+            // Цель может быть союзником (клонирует) или врагом
             int targetIdxSameArmy = FindInArmy(target, actorIsArmy1);
             bool targetIsArmy1 = targetIdxSameArmy >= 0 ? actorIsArmy1 : !actorIsArmy1;
             int targetIndex = FindIndex(target, targetIsArmy1);
@@ -144,11 +139,9 @@ namespace WpfPresentation.Engine
             });
         }
 
-        // ── Вспомогательные методы поиска ────────────────────────────────────
+        // Вспомогательные методы поиска 
 
-        /// <summary>
-        /// Возвращает индекс юнита в армии. При неудаче — 0 (безопасный fallback).
-        /// </summary>
+        // Возвращает индекс юнита в армии
         private int FindIndex(IUnit unit, bool isArmy1)
         {
             int idx = FindInArmy(unit, isArmy1);
@@ -156,9 +149,8 @@ namespace WpfPresentation.Engine
         }
 
         /// <summary>
-        /// Ищет юнита в армии сначала по ссылке на объект (быстро),
-        /// затем по базовому имени (fallback для снятых декораторов —
-        /// DecoratorStripped→inner unit передаётся в LogDeath уже не в списке армии).
+        /// Ищет юнита в армии сначала по ссылке на объект,
+        /// затем по базовому имени
         /// </summary>
         private int FindInArmy(IUnit unit, bool isArmy1)
         {
@@ -204,5 +196,12 @@ namespace WpfPresentation.Engine
                 Message = buffName
             });
         }
+
+        // Потеря баффа в WPF не требует отдельного события 
+        public void LogBuffLost(IUnit unit, string buffName, bool attackerIsArmy1) { }
+
+        public void LogCloneChance(IUnit wizard, int chancePercent, bool isArmy1) { }
+        public void LogCloneFailed(IUnit wizard, int newChancePercent, bool isArmy1) { }
+        public void LogCloneSuccess(IUnit wizard, string targetName, bool isArmy1) { }
     }
 }

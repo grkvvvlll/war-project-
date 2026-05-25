@@ -10,5 +10,7 @@
         void RemoveFrontUnit();
         void RemoveDeadUnits();
         void InsertUnit(IUnit unit, int position);
+        void SetUnit(int index, IUnit unit);
+        void ReverseUnits();
     }
 }

@@ -36,12 +36,10 @@ namespace WpfPresentation.Views
         {
             _selectedCard = n;
 
-            // Сброс всех карточек
             SetCardStyle(Card1, false);
             SetCardStyle(Card2, false);
             SetCardStyle(Card3, false);
 
-            // Выделение выбранной
             var selected = n switch { 1 => Card1, 2 => Card2, _ => Card3 };
             SetCardStyle(selected, true);
         }
@@ -51,7 +49,6 @@ namespace WpfPresentation.Views
             card.BorderBrush = selected ? BorderActive : BorderMuted;
             card.Background = selected ? BgSelected : BgTransparent;
 
-            // Меняем цвет заголовка
             if (card.Child is StackPanel sp && sp.Children.Count > 1)
             {
                 var icon = sp.Children[0] as TextBlock;

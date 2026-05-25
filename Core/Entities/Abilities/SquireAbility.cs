@@ -101,5 +101,58 @@ namespace Core.Entities.Abilities
 
         public void ResetCharge() { }
         public void Charge() { }
+
+        public int Execute(IUnit user, int userIndex,
+                           IArmy ownArmy, IArmy enemyArmy,
+                           bool isArmy1, IAbilityExecutionContext ctx)
+        {
+            var neighborIndices = ctx.GetNeighborIndices(ownArmy, userIndex, isArmy1, maxDist: 1);
+
+            IUnit? targetHeavy = null;
+            int targetIndex = -1;
+
+            foreach (var idx in neighborIndices)
+            {
+                var neighbor = ownArmy.Units[idx];
+                if (!neighbor.IsAlive) continue;
+                if (!CanTarget(user, neighbor, isAlly: true)) continue;
+                targetHeavy = neighbor;
+                targetIndex = idx;
+                break;
+            }
+
+            if (targetHeavy == null) return 0;
+
+            int oldAttack = targetHeavy.Attack;
+            int oldDefence = targetHeavy.Defence;
+
+            Use(user, targetHeavy, distance: 0);
+
+            if (LastAppliedUnit == null) return 0;
+
+            ownArmy.SetUnit(targetIndex, LastAppliedUnit);
+
+            string buffName = "Бафф";
+            int atkDelta = 0, defDelta = 0;
+
+            if (LastAppliedUnit is UnitDecorator dec)
+            {
+                var buff = dec.GetCurrentBuff();
+                buffName = buff.NameNominative;
+                atkDelta = buff.AttackBonus;
+                defDelta = buff.DefenceBonus;
+            }
+
+            if (atkDelta != 0 || defDelta != 0)
+            {
+                var stats = new List<string>();
+                if (atkDelta != 0) stats.Add($"ATK {oldAttack} -> {oldAttack + atkDelta}");
+                if (defDelta != 0) stats.Add($"DEF {oldDefence} -> {oldDefence + defDelta}");
+                ctx.Logger.Log($"   Характеристики: {string.Join(", ", stats)}");
+            }
+
+            ctx.Logger.LogBuffAdded(user, targetHeavy, buffName, isArmy1);
+            return 0;
+        }
     }
 }

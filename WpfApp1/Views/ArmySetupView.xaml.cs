@@ -68,7 +68,7 @@ namespace WpfPresentation.Views
                 { "Wizard", new WizardUnitCreator(random) },
                 { "GulyayGorod", new GulyayGorodCreator() }
             };
-            _autoFactory = new AutoArmyFactory(_unitCreators);
+            _autoFactory = new AutoArmyFactory(_unitCreators, random);
             _manualFactory = new ManualArmyFactory(_unitCreators);
 
             TitleText.Text = armyName;

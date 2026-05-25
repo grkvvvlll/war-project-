@@ -30,7 +30,7 @@ namespace WpfPresentation.Views
 
             RoundsText.Text = $"Сражение длилось {rounds} {RoundWord(rounds)}";
 
-            // Победившая армия — её счёт в золотом цвете
+            // Победившая армия 
             if (score1 > score2)
                 Score1Text.Foreground = System.Windows.Media.Brushes.Goldenrod;
             else if (score2 > score1)

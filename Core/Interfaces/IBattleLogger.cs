@@ -14,6 +14,10 @@
             bool attackerIsArmy1);
 
         void LogBuffAdded(IUnit squire, IUnit target, string buffName, bool isArmy1);
+        void LogBuffLost(IUnit unit, string buffName, bool attackerIsArmy1);
+        void LogCloneChance(IUnit wizard, int chancePercent, bool isArmy1);
+        void LogCloneFailed(IUnit wizard, int newChancePercent, bool isArmy1);
+        void LogCloneSuccess(IUnit wizard, string targetName, bool isArmy1);
 
         void LogDeath(IUnit unit, bool isArmy1);
 

@@ -11,6 +11,12 @@ namespace Core.Factories.Armies
 
         public string FactoryName => "Ручная";
 
+        public void PrepareCreation(IEnumerable<string>? choices = null)
+        {
+            if (choices != null)
+                SetUnitChoices(choices);
+        }
+
         public ManualArmyFactory(Dictionary<string, UnitCreator> unitCreators)
         {
             _unitCreators = unitCreators;

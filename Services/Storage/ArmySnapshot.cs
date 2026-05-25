@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-
 namespace Services.Storage
 {
     public class ArmySnapshot

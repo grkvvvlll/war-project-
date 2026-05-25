@@ -29,5 +29,6 @@ namespace Core.Entities.Units
         }
 
         public override bool IsAlive => !_original.HasDestroyed;
+        public override bool CanMeleeAttack => false;
     }
 }

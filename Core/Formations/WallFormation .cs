@@ -9,7 +9,7 @@ namespace Core.Formations
         public string Name => "Стенка на стенку";
         public string Description => "Одна колонна, юниты выстроены сверху вниз. Бьются попарно по строкам.";
 
-        // ── Позиция юнита: строка = позиция в списке живых, столбец = 0 ────────
+        // Позиция юнита
         public (int row, int col) GetPosition(IArmy army, int unitIndex, bool isArmy1)
         {
             var map = GetAlivePositionMap(army);
@@ -17,13 +17,13 @@ namespace Core.Formations
             return pos;
         }
 
-        // ── Все юниты на фронте ────────────────────────────────────────────────
+        // Все юниты на фронте 
         public bool IsOnFrontLine(IArmy army, int unitIndex, bool isArmy1)
         {
-            return true; // все юниты всегда на фронте
+            return true; 
         }
 
-        // ── Special ability только если напротив пусто ────────────────────────
+        // Special ability только если напротив пусто 
         public bool CanUseSpecialAbility(IArmy myArmy, int unitIndex, IArmy enemyArmy, bool isArmy1)
         {
             var myMap = GetAlivePositionMap(myArmy);
@@ -31,12 +31,11 @@ namespace Core.Formations
 
             if (!myMap.TryGetValue(unitIndex, out var myPos)) return false;
 
-            // Проверяем есть ли враг в той же строке
             bool hasOpponent = enemyMap.Values.Any(p => p.row == myPos.row);
             return !hasOpponent;
         }
 
-        // ── Ближний бой: пары по строкам ──────────────────────────────────────
+        // Ближний бой: пары по строкам 
         public List<(int, int)> GetMeleePairs(IArmy attackerArmy, IArmy defenderArmy, bool attackerIsArmy1)
         {
             var pairs = new List<(int, int)>();
@@ -67,7 +66,7 @@ namespace Core.Formations
             return defenderArmy.Units.FirstOrDefault(u => u.IsAlive);
         }
 
-        // ── Дистанция до врага: разница строк + зазор ─────────────────────────
+        // Дистанция до врага
         public int GetDistanceBetweenUnits(IArmy myArmy, int myIndex, IArmy enemyArmy, int enemyIndex, bool isArmy1)
         {
             var myMap = GetAlivePositionMap(myArmy);
@@ -79,7 +78,7 @@ namespace Core.Formations
             return Math.Abs(myPos.row - enPos.row) + GapBetweenArmies;
         }
 
-        // ── Дистанция до союзника: разница строк ──────────────────────────────
+        // Дистанция до союзника
         public int GetDistanceBetweenAllies(IArmy army, int index1, int index2, bool isArmy1)
         {
             var map = GetAlivePositionMap(army);
@@ -90,7 +89,7 @@ namespace Core.Formations
             return Math.Abs(p1.row - p2.row);
         }
 
-        // ── Карта позиций: unitIndex → (row, col) ─────────────────────────────
+        // Карта позиций
         // Заполнение сверху вниз по живым юнитам в порядке их индекса
         public Dictionary<int, (int row, int col)> GetAlivePositionMap(IArmy army)
         {

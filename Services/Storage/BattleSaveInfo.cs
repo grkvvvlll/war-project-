@@ -1,5 +1,3 @@
-using System;
-
 namespace Services.Storage
 {
     public class BattleSaveInfo

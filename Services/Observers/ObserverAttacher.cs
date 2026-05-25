@@ -1,5 +1,4 @@
 ﻿using Core.Interfaces;
-using Services.Observers;
 
 namespace Services.Observers
 {
@@ -7,12 +6,12 @@ namespace Services.Observers
     {
         public void AttachArmy(IArmy army)
         {
-            ObserverRegistry.Attach(army);
+            ObserverRegistry.Instance.Attach(army);
         }
 
         public void DetachArmy(IArmy army)
         {
-            ObserverRegistry.Detach(army);
+            ObserverRegistry.Instance.Detach(army);
         }
     }
 }

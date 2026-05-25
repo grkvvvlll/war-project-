@@ -1,6 +1,4 @@
-﻿using Services.Logging;
-
-namespace Services.Logging
+﻿namespace Services.Logging
 {
     public class LogCleaner
     {

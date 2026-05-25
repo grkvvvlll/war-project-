@@ -1,6 +1,6 @@
-﻿using System;
+﻿using Core.Entities.Units;
+using Core.Formations;
 using Core.Interfaces;
-using Core.Entities.Units;
 
 namespace Core.Entities.Abilities
 {
@@ -63,6 +63,64 @@ namespace Core.Entities.Abilities
 
         public void ResetCharge() => _currentChance = _baseChance;
         public void Charge() => _currentChance = Math.Min(100, _currentChance + 5);
+
+        public int Execute(IUnit user, int userIndex,
+                           IArmy ownArmy, IArmy enemyArmy,
+                           bool isArmy1, IAbilityExecutionContext ctx)
+        {
+            ctx.Logger.LogCloneChance(user, GetCurrentChance(), isArmy1);
+
+            // Ищем кандидатов для клонирования среди союзников в радиусе
+            var candidates = new List<(IUnit unit, int dist)>();
+            for (int j = 0; j < ownArmy.Units.Count; j++)
+            {
+                var ally = ownArmy.Units[j];
+                if (!ally.IsAlive || ally == user) continue;
+                if (!(ally is LightUnit || ally is Archer)) continue;
+                int dist = ctx.GetAllyDistance(ownArmy, userIndex, j, isArmy1);
+                if (dist <= _range)
+                    candidates.Add((ally, dist));
+            }
+
+            if (!candidates.Any())
+            {
+                Charge();
+                ctx.Logger.LogCloneFailed(user, GetCurrentChance(), isArmy1);
+                return 0;
+            }
+
+            var (target, targetDist) = candidates[ctx.Random.Next(0, candidates.Count)];
+
+            if (!CanTarget(user, target, isAlly: true))
+            {
+                Charge();
+                ctx.Logger.LogCloneFailed(user, GetCurrentChance(), isArmy1);
+                return 0;
+            }
+
+            string targetName = target.Name;
+
+            Action<IUnit, IUnit>? handler = null;
+            handler = (wizardUser, clone) =>
+            {
+                int insertPosition = ctx.Formation is WideBridgeFormation
+                    ? userIndex
+                    : (isArmy1 ? userIndex + 1 : userIndex);
+
+                ownArmy.InsertUnit(clone, insertPosition);
+                ctx.RegisterNewUnit(clone);
+                ctx.Logger.LogCloneSuccess(wizardUser, targetName, isArmy1);
+            };
+
+            CloneCreated += handler;
+            Use(user, target, targetDist);
+            CloneCreated -= handler;
+
+            if (GetCurrentChance() > _baseChance)
+                ctx.Logger.LogCloneFailed(user, GetCurrentChance(), isArmy1);
+
+            return 0;
+        }
 
         //  Метод для получения текущей вероятности
         public int GetCurrentChance() => _currentChance;

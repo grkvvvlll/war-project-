@@ -9,14 +9,10 @@ using Core.Formations;
 namespace Services.Storage
 {
     public class BattleSaveService
-        // Singletone
     {
-        private static readonly BattleSaveService _instance = new BattleSaveService();
-        public static BattleSaveService Instance => _instance;
-
         private readonly string _dir;
 
-        private BattleSaveService(string? savesDir = null)
+        public BattleSaveService(string? savesDir = null)
         {
             _dir = savesDir ?? Path.Combine(AppContext.BaseDirectory, "saves");
             Directory.CreateDirectory(_dir);

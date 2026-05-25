@@ -30,7 +30,7 @@ namespace WpfPresentation.Views
             BudgetConfirmed?.Invoke(budget);
         }
 
-        // Разрешаем вводить только цифры
+        // вводить только цифры
         private void BudgetInput_PreviewTextInput(object sender, TextCompositionEventArgs e)
         {
             e.Handled = !e.Text.All(char.IsDigit);

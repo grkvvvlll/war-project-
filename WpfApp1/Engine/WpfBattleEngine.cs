@@ -9,7 +9,6 @@ using Services.Storage;
 using Services.UI;
 using Core.Entities.Buffs;
 using Core.Entities.Units;
-using System.IO;
 
 namespace WpfPresentation.Engine
 {
@@ -21,7 +20,7 @@ namespace WpfPresentation.Engine
         private readonly IRandomService _random;
         private readonly WpfBattleLogger _logger;
         private MeleeService _meleeService;
-        private SpecialAbilityService _specialAbilityService;
+        private ISpecialAbilityService _specialAbilityService;
 
         private int _score1 = 0;
         private int _score2 = 0;
@@ -37,8 +36,6 @@ namespace WpfPresentation.Engine
         public int Round => _round;
         public bool IsOver => !HasAlive(_army1) || !HasAlive(_army2);
         public CommandHistory History { get; } = new();
-
-        // Exposing state for save/load
         public IArmy Army1 => _army1;
         public IArmy Army2 => _army2;
         public bool Army1TurnState => _army1Turn;
@@ -51,20 +48,19 @@ namespace WpfPresentation.Engine
             _formation = formation;
             _random = new RandomService();
             _logger = new WpfBattleLogger();
-            _logger.SetArmies(_army1, _army2);   // ← индексы для анимаций
+            _logger.SetArmies(_army1, _army2);   // индексы для анимаций
 
             var damageCalculator = new DamageCalculator();
             _meleeService = new MeleeService(damageCalculator, _logger, formation);
-            _specialAbilityService = new SpecialAbilityService(_logger, formation);
+            _specialAbilityService = new SpecialAbilityService(_logger, _random, formation);
 
             _army1Turn = _random.Next(0, 2) == 0;
-            _snapshotService = new BattleStateSnapshotService(_random);
+            _snapshotService = new BattleStateSnapshotService(_random, new BattleSaveService());
             _initialSnapshot = CaptureSnapshot("Начальное состояние");
-            ClearDamageLog();
+            ObserverRegistry.Instance.HealthObserver.ClearLog();
             AttachObservers();
         }
 
-        // Resume from a saved game
         public WpfBattleEngine(BattleResumeData resume)
         {
             _army1 = resume.Army1;
@@ -72,17 +68,16 @@ namespace WpfPresentation.Engine
             _formation = resume.Formation;
             _random = new RandomService();
             _logger = new WpfBattleLogger();
-            _logger.SetArmies(_army1, _army2);   // ← индексы для анимаций
-
+            _logger.SetArmies(_army1, _army2);   
             var damageCalculator = new DamageCalculator();
             _meleeService = new MeleeService(damageCalculator, _logger, _formation);
-            _specialAbilityService = new SpecialAbilityService(_logger, _formation);
+            _specialAbilityService = new SpecialAbilityService(_logger, _random, _formation);
 
             _round = resume.Turns;
             _army1Turn = resume.Army1Turn;
             _score1 = resume.ScoreArmy1;
             _score2 = resume.ScoreArmy2;
-            _snapshotService = new BattleStateSnapshotService(_random);
+            _snapshotService = new BattleStateSnapshotService(_random, new BattleSaveService());
             _initialSnapshot = CaptureSnapshot("Начальное состояние");
             AttachObservers();
         }
@@ -99,7 +94,6 @@ namespace WpfPresentation.Engine
             _logger.Events.Clear();
             _round++;
 
-            // Только для клонов — маг не вызывает логгер
             var unitsBefore1 = new HashSet<IUnit>(_army1.Units);
             var unitsBefore2 = new HashSet<IUnit>(_army2.Units);
 
@@ -273,38 +267,16 @@ namespace WpfPresentation.Engine
 
         private void AttachObservers()
         {
-            foreach (var unit in _army1.Units)
-            {
-                ObserverRegistry.DeathObserver.Subscribe(unit);
-                ObserverRegistry.HealthObserver.Subscribe(unit);
-            }
-            foreach (var unit in _army2.Units)
-            {
-                ObserverRegistry.DeathObserver.Subscribe(unit);
-                ObserverRegistry.HealthObserver.Subscribe(unit);
-            }
+            ObserverRegistry.Instance.Attach(_army1);
+            ObserverRegistry.Instance.Attach(_army2);
         }
 
         private void DetachObservers()
         {
-            foreach (var unit in _army1.Units)
-            {
-                ObserverRegistry.DeathObserver.Unsubscribe(unit);
-                ObserverRegistry.HealthObserver.Unsubscribe(unit);
-            }
-            foreach (var unit in _army2.Units)
-            {
-                ObserverRegistry.DeathObserver.Unsubscribe(unit);
-                ObserverRegistry.HealthObserver.Unsubscribe(unit);
-            }
+            ObserverRegistry.Instance.Detach(_army1);
+            ObserverRegistry.Instance.Detach(_army2);
         }
 
-        private static void ClearDamageLog()
-        {
-            string logPath = Path.Combine(AppContext.BaseDirectory, "logs", "damage-log.txt");
-            if (File.Exists(logPath))
-                File.WriteAllText(logPath, string.Empty);
-        }
 
         private bool HasAlive(IArmy army) => army.Units.Any(u => u.IsAlive);
 

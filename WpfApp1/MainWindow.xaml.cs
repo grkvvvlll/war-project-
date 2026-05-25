@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Windows;
+﻿using System.Windows;
 using Core.Interfaces;
 using Services.Commands;
 using Services.Random;
@@ -24,18 +23,19 @@ namespace WpfPresentation
         private int _budget;
         private WpfBattleEngine? _engine;
         private readonly UnitRenumberer _unitRenumberer = new();
-        // Инвокер для команд без undo (навигация, диалоги)
+        // Инвокер для команд без undo 
         private readonly SimpleCommandInvoker _simpleInvoker = new();
+        private readonly BattleSaveService _saveService = new();
 
         private void ShowMainMenu()
         {
             var menu = new MainMenuView();
 
-            // Кнопки главного меню — все через Command (SimpleCommandInvoker)
+            // Кнопки главного меню через SimpleCommandInvoker
             menu.NewGameRequested += () => _simpleInvoker.Execute(
                 new ActionGameCommand("Новая игра", ShowNewGame, () => { }));
 
-            menu.LoadGameRequested += ShowLoadGame; // исключено из Command 
+            menu.LoadGameRequested += ShowLoadGame;
 
             menu.HelpRequested += () => _simpleInvoker.Execute(
                 new ActionGameCommand("Помощь", ShowHelp, () => { }));
@@ -128,19 +128,18 @@ namespace WpfPresentation
 
         private void WireBattleView(BattleView battleView)
         {
-            // Undoable — идут через CommandHistory внутри WpfBattleEngine
+            // Undoable идут через CommandHistory внутри WpfBattleEngine
             battleView.NextRoundRequested += OnNextRound;
             battleView.UndoRequested += OnUndo;
             battleView.RedoRequested += OnRedo;
             battleView.ResetRequested += OnReset;
             battleView.FormationChangeRequested += OnFormationChangeRequested;
 
-            // Не undoable — идут через SimpleCommandInvoker
+            // Не undoable идут через SimpleCommandInvoker
             battleView.ArmyCompositionRequested += OnArmyComposition;
             battleView.AutoModeRequested += OnAutoModeCommand;
             battleView.ExitRequested += OnExitBattle;
 
-            // Исключено из Command 
             battleView.SaveRequested += OnSave;
         }
 
@@ -161,7 +160,7 @@ namespace WpfPresentation
 
             try
             {
-                var save = BattleSaveService.Instance.CreateInProgressSave(
+                var save = _saveService.CreateInProgressSave(
                     _engine.Army1,
                     _engine.Army2,
                     _engine.Round,
@@ -172,7 +171,7 @@ namespace WpfPresentation
                     Enumerable.Empty<string>(),
                     dialog.SaveName);
 
-                BattleSaveService.Instance.Save(save);
+                _saveService.Save(save);
             }
             catch (Exception ex)
             {
@@ -204,7 +203,7 @@ namespace WpfPresentation
                         break;
 
                     case BattleEventType.ArrowShot:
-                        // Лучник тянет лук, стрела летит 500 мс, потом вспышка попадания
+                        // полет стрелы
                         _battleView.PlayShoot(e.ActorIsArmy1, e.ActorIndex, e.ActorName);
                         _battleView.PlayArrow(
                             e.ActorIsArmy1, e.ActorIndex, e.ActorName,
@@ -329,7 +328,7 @@ namespace WpfPresentation
                     var window = new ArmyCompositionWindow(_engine.Army1, _engine.Army2, this);
                     window.ShowDialog();
                 },
-                undo: () => { })); // показ диалога не отменяется
+                undo: () => { }));
         }
 
         private void OnExitBattle()
@@ -337,11 +336,13 @@ namespace WpfPresentation
             _simpleInvoker.Execute(new ActionGameCommand(
                 "Выход в главное меню",
                 execute: ShowMainMenu,
-                undo: () => { })); // навигация не отменяется
+                undo: () => { })); 
         }
 
         private void OnAutoModeCommand()
         {
+            // Авторежим: каждый раунд внутри идёт через ExecuteRoundCommand → CommandHistory.
+            // Сам запуск оборачиваем в команду; после авторежима раунды можно отменять по одному.
             _simpleInvoker.Execute(new ActionGameCommand(
                 "Авторежим",
                 execute: OnAutoMode,   
@@ -384,13 +385,13 @@ namespace WpfPresentation
 
         private void ShowLoadGame()
         {
-            var dialog = new LoadGameWindow(this);
+            var dialog = new LoadGameWindow(this, _saveService);
             if (dialog.ShowDialog() != true || dialog.SelectedSave == null) return;
 
             try
             {
-                var save = BattleSaveService.Instance.Load(dialog.SelectedSave.FileName);
-                var resume = BattleSaveService.Instance.RestoreBattle(save, new RandomService());
+                var save = _saveService.Load(dialog.SelectedSave.FileName);
+                var resume = _saveService.RestoreBattle(save, new RandomService());
                 ShowBattleFromSave(resume);
             }
             catch (Exception ex)

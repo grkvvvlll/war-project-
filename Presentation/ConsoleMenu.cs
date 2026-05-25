@@ -1,13 +1,8 @@
 ﻿using Core.Entities;
-using Core.Entities.Units;
 using Core.Factories;
-using Core.Factories.Armies;
-using Core.Factories.Units;
-using Core.Formations;
 using Core.Interfaces;
 using Services.Battle;
 using Services.Logging;
-using Services.Random;
 using Services.Storage;
 using Services.Observers;
 using Services.ArmyBuilding;
@@ -25,6 +20,8 @@ namespace Presentation
         private readonly IBattleField _battleField;
         private readonly UnitCreatorFactory _unitCreatorFactory;
         private readonly ArmyBuilder _armyBuilder;
+        private readonly ManualArmySelector _manualArmySelector;
+        private readonly BattleSaveService _saveService;
         private readonly FormationSelector _formationSelector;
         private readonly LogCleaner _logCleaner;
         private readonly ArmyPrinter _armyPrinter;
@@ -45,6 +42,8 @@ namespace Presentation
             IDamageCalculator damageCalculator,
             IBattleField battleField,
             ArmyBuilder armyBuilder,
+            ManualArmySelector manualArmySelector,
+            BattleSaveService saveService,
             FormationSelector formationSelector,
             LogCleaner logCleaner,
             ArmyPrinter armyPrinter,
@@ -52,13 +51,15 @@ namespace Presentation
             CreationTypeSelector creationTypeSelector,
             ObserverAttacher observerAttacher,
             BudgetReader budgetReader)
-            
+
         {
             _random = random;
             _logger = logger;
             _damageCalculator = damageCalculator;
             _battleField = battleField;
             _armyBuilder = armyBuilder;
+            _manualArmySelector = manualArmySelector;
+            _saveService = saveService;
             _formationSelector = formationSelector;
             _logCleaner = logCleaner;
             _armyPrinter = armyPrinter;
@@ -142,10 +143,16 @@ namespace Presentation
             var formation = _formationSelector.Select();
             if (_battleField is BattleField bf) bf.SetFormation(formation);
 
-            var army1 = _armyBuilder.Build("Армия 1", budget, _creationTypeSelector.Select("Армия 1"));
+            bool isAuto1 = _creationTypeSelector.Select("Армия 1");
+            var army1 = isAuto1
+                ? _armyBuilder.Build("Армия 1", budget)
+                : _armyBuilder.Build("Армия 1", budget, _manualArmySelector.GetUnitChoices("Армия 1", budget));
             _unitRenumberer.Renumber(army1, true, formation);
 
-            var army2 = _armyBuilder.Build("Армия 2", budget, _creationTypeSelector.Select("Армия 2"));
+            bool isAuto2 = _creationTypeSelector.Select("Армия 2");
+            var army2 = isAuto2
+                ? _armyBuilder.Build("Армия 2", budget)
+                : _armyBuilder.Build("Армия 2", budget, _manualArmySelector.GetUnitChoices("Армия 2", budget));
             _unitRenumberer.Renumber(army2, false, formation);
 
             _observerAttacher.AttachArmy(army1);
@@ -165,31 +172,31 @@ namespace Presentation
 
                 var result = _battleField.StartBattle(army1, army2, autoMode: false);
                 if (result.Winner == BattleField.DrawResult)
-{
-    Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
-    AskToSaveBattle(result);
-    return;
-}
+                {
+                    Console.WriteLine($"\n Ничья после {result.Turns} ходов!");
+                    AskToSaveBattle(result);
+                    return;
+                }
 
-if (result.Winner == BattleField.SavedAndStoppedResult)
-{
-    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
-    Console.WriteLine("Нажмите Enter для возврата в меню...");
-    Console.ReadLine();
-    return;
-}
+                if (result.Winner == BattleField.SavedAndStoppedResult)
+                {
+                    Console.WriteLine($"\nИгра сохранена. Бой остановлен на {result.Turns}-м раунде.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
 
-if (result.Winner == BattleField.StoppedWithoutSaveResult)
-{
-    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
-    Console.WriteLine("Нажмите Enter для возврата в меню...");
-    Console.ReadLine();
-    return;
-}
+                if (result.Winner == BattleField.StoppedWithoutSaveResult)
+                {
+                    Console.WriteLine($"\nБой остановлен на {result.Turns}-м раунде без сохранения.");
+                    Console.WriteLine("Нажмите Enter для возврата в меню...");
+                    Console.ReadLine();
+                    return;
+                }
 
-Console.WriteLine($"\nПобедитель: {result.Winner}");
-Console.WriteLine($"Ходов: {result.Turns}");
-AskToSaveBattle(result);
+                Console.WriteLine($"\nПобедитель: {result.Winner}");
+                Console.WriteLine($"Ходов: {result.Turns}");
+                AskToSaveBattle(result);
             }
             finally
             {
@@ -226,9 +233,8 @@ AskToSaveBattle(result);
             Console.Write("Введите название сохранения: ");
             string saveName = (Console.ReadLine() ?? "").Trim();
 
-            var saveService = BattleSaveService.Instance;
-            var save = saveService.CreateFinishedSave(result, rec.Lines, saveName);
-            var fileName = saveService.Save(save, saveName);
+            var save = _saveService.CreateFinishedSave(result, rec.Lines, saveName);
+            var fileName = _saveService.Save(save, saveName);
 
             Console.WriteLine($"Сохранено: saves/{fileName}");
             Console.WriteLine("Нажмите Enter для возврата в меню...");
@@ -240,8 +246,7 @@ AskToSaveBattle(result);
         {
             Console.Clear();
 
-            var saveService = BattleSaveService.Instance;
-            var saves = saveService.ListSaves();
+            var saves = _saveService.ListSaves();
 
             if (saves.Count == 0)
             {
@@ -273,7 +278,7 @@ AskToSaveBattle(result);
                 return;
 
             var chosen = saves[n - 1];
-            var save = saveService.Load(chosen.FileName);
+            var save = _saveService.Load(chosen.FileName);
 
             Console.Clear();
             Console.WriteLine($"=== Загрузка: {chosen.FileName} ===");
@@ -300,13 +305,13 @@ AskToSaveBattle(result);
                 return;
             }
 
-            var restored = saveService.RestoreBattle(save, _random);
+            var restored = _saveService.RestoreBattle(save, _random);
 
             if (_battleField is BattleField bf)
                 bf.SetFormation(restored.Formation);
 
-            ObserverRegistry.Attach(restored.Army1);
-            ObserverRegistry.Attach(restored.Army2);
+            ObserverRegistry.Instance.Attach(restored.Army1);
+            ObserverRegistry.Instance.Attach(restored.Army2);
 
             try
             {
@@ -350,11 +355,11 @@ AskToSaveBattle(result);
             }
             finally
             {
-                ObserverRegistry.Detach(restored.Army1);
-                ObserverRegistry.Detach(restored.Army2);
+                ObserverRegistry.Instance.Detach(restored.Army1);
+                ObserverRegistry.Instance.Detach(restored.Army2);
             }
         }
 
-        
+
     }
 }

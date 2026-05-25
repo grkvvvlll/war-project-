@@ -1,6 +1,4 @@
-﻿using Core.Interfaces;
-
-namespace Core.Entities.Units
+﻿namespace Core.Entities.Units
 {
     public class HeavyUnit : Unit
     {

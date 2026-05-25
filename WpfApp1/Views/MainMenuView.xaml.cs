@@ -20,15 +20,16 @@ namespace WpfPresentation.Views
         {
             InitializeComponent();
 
-            // события поднимаются наверх в MainWindow, где уже оборачиваются в команды через _simpleInvoker
+            // Навигационные кнопки: события поднимаются наверх в MainWindow,
+            // где уже оборачиваются в команды через _simpleInvoker
             NewGameButton.Click += (_, _) => NewGameRequested?.Invoke();
             LoadGameButton.Click += (_, _) => LoadGameRequested?.Invoke(); // исключено
             HelpButton.Click += (_, _) => HelpRequested?.Invoke();
             ExitButton.Click += (_, _) => ExitRequested?.Invoke();
 
             // Инициализируем тоглы текущим состоянием наблюдателей
-            RefreshToggle(DeathToggle, ObserverRegistry.DeathObserver.IsEnabled);
-            RefreshToggle(HealthToggle, ObserverRegistry.HealthObserver.IsEnabled);
+            RefreshToggle(DeathToggle, ObserverRegistry.Instance.DeathObserver.IsEnabled);
+            RefreshToggle(HealthToggle, ObserverRegistry.Instance.HealthObserver.IsEnabled);
 
             ObserversButton.Click += (_, _) =>
             {
@@ -37,37 +38,38 @@ namespace WpfPresentation.Views
                     : Visibility.Collapsed;
             };
 
+            // Переключение наблюдателей — undoable команды
             DeathToggle.Click += (_, _) =>
             {
-                bool stateBefore = ObserverRegistry.DeathObserver.IsEnabled;
+                bool stateBefore = ObserverRegistry.Instance.DeathObserver.IsEnabled;
                 _invoker.Execute(new ActionGameCommand(
                     "Переключить звук смерти",
                     execute: () =>
                     {
-                        ObserverRegistry.DeathObserver.IsEnabled = !stateBefore;
-                        RefreshToggle(DeathToggle, ObserverRegistry.DeathObserver.IsEnabled);
+                        ObserverRegistry.Instance.DeathObserver.IsEnabled = !stateBefore;
+                        RefreshToggle(DeathToggle, ObserverRegistry.Instance.DeathObserver.IsEnabled);
                     },
                     undo: () =>
                     {
-                        ObserverRegistry.DeathObserver.IsEnabled = stateBefore;
-                        RefreshToggle(DeathToggle, ObserverRegistry.DeathObserver.IsEnabled);
+                        ObserverRegistry.Instance.DeathObserver.IsEnabled = stateBefore;
+                        RefreshToggle(DeathToggle, ObserverRegistry.Instance.DeathObserver.IsEnabled);
                     }));
             };
 
             HealthToggle.Click += (_, _) =>
             {
-                bool stateBefore = ObserverRegistry.HealthObserver.IsEnabled;
+                bool stateBefore = ObserverRegistry.Instance.HealthObserver.IsEnabled;
                 _invoker.Execute(new ActionGameCommand(
                     "Переключить лог урона",
                     execute: () =>
                     {
-                        ObserverRegistry.HealthObserver.IsEnabled = !stateBefore;
-                        RefreshToggle(HealthToggle, ObserverRegistry.HealthObserver.IsEnabled);
+                        ObserverRegistry.Instance.HealthObserver.IsEnabled = !stateBefore;
+                        RefreshToggle(HealthToggle, ObserverRegistry.Instance.HealthObserver.IsEnabled);
                     },
                     undo: () =>
                     {
-                        ObserverRegistry.HealthObserver.IsEnabled = stateBefore;
-                        RefreshToggle(HealthToggle, ObserverRegistry.HealthObserver.IsEnabled);
+                        ObserverRegistry.Instance.HealthObserver.IsEnabled = stateBefore;
+                        RefreshToggle(HealthToggle, ObserverRegistry.Instance.HealthObserver.IsEnabled);
                     }));
             };
         }

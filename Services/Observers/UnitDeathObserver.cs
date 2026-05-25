@@ -2,7 +2,7 @@ using Core.Interfaces;
 
 namespace Services.Observers
 {
-    public class UnitDeathObserver
+    public class UnitDeathObserver : IUnitObserver
     {
         public bool IsEnabled { get; set; } = true;
 

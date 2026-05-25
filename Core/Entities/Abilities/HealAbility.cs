@@ -46,5 +46,37 @@ namespace Core.Entities.Abilities
 
         public void ResetCharge() { }
         public void Charge() { }
+
+        public int Execute(IUnit user, int userIndex,
+                           IArmy ownArmy, IArmy enemyArmy,
+                           bool isArmy1, IAbilityExecutionContext ctx)
+        {
+            // Найти союзника в радиусе лечения
+            var validTargets = new List<IUnit>();
+
+            for (int j = 0; j < ownArmy.Units.Count; j++)
+            {
+                var ally = ownArmy.Units[j];
+                if (!ally.IsAlive || ally == user) continue;
+                if (!CanTarget(user, ally, isAlly: true)) continue;
+                int dist = ctx.GetAllyDistance(ownArmy, userIndex, j, isArmy1);
+                if (dist <= _range)
+                    validTargets.Add(ally);
+            }
+
+            if (!validTargets.Any()) return 0;
+
+            var target = validTargets[ctx.Random.Next(0, validTargets.Count)];
+            int oldHp = target.Health;
+            Use(user, target, distance: 0);
+
+            int healed = target.Health - oldHp;
+            if (healed > 0)
+                ctx.Logger.LogHeal(user, target, healed, isArmy1);
+            else
+                ctx.Logger.LogHealNoEffect(user, target, isArmy1);
+
+            return 0;
+        }
     }
 }

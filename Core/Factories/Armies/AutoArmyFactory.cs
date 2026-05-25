@@ -8,8 +8,11 @@ namespace Core.Factories.Armies
     {
         public string FactoryName => "Автоматическая";
 
+        // Автоматической фабрике выбор юнитов не нужен
+        public void PrepareCreation(IEnumerable<string>? choices = null) { }
+
         private readonly Dictionary<string, UnitCreator> _unitCreators;
-        private readonly System.Random _random;
+        private readonly IRandomService _random;
 
         private const double HeavyWeight = 0.17;
         private const double LightWeight = 0.17;
@@ -18,10 +21,10 @@ namespace Core.Factories.Armies
         private const double WizardWeight = 0.17;
         private const double GulyayGorodWeight = 0.15;
 
-        public AutoArmyFactory(Dictionary<string, UnitCreator> unitCreators)
+        public AutoArmyFactory(Dictionary<string, UnitCreator> unitCreators, IRandomService random)
         {
             _unitCreators = unitCreators;
-            _random = new System.Random();
+            _random = random;
         }
 
         public IArmy CreateArmy(string name, int budget)
@@ -69,7 +72,7 @@ namespace Core.Factories.Armies
             while (remaining >= unitTypes.Min(t => t.cost))
             {
                 var affordable = unitTypes.Where(t => t.cost <= remaining).ToList();
-                var chosen = affordable[_random.Next(affordable.Count)];
+                var chosen = affordable[_random.Next(0, affordable.Count)];
                 counters[chosen.type]++;
                 units.Add(_unitCreators[chosen.type].CreateUnit(
                     $"{chosen.type} {counters[chosen.type]}"));
